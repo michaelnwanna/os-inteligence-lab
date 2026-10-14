@@ -8,7 +8,7 @@ public static class Workflow
 {
     /// <summary>Full analysis: detect, investigate, build the replay, persist.</summary>
     public static List<Incident> RunAnalysis(TelemetryStore store, DetectionConfig? cfg = null, ILlmProvider? llm = null,
-        string repoMode = "auto", bool investigate = true, bool save = true)
+        string repoMode = "auto", bool investigate = true, bool save = true, IncidentArchive? archive = null)
     {
         cfg ??= new DetectionConfig();
         var ws = new Workspace(store, cfg);
@@ -20,6 +20,7 @@ public static class Workflow
             var start = (string)inc.Reproducibility["analysis_start"]!; // later episodes were analysed on a re-baselined window
             if (!windows.TryGetValue(start, out var window))
                 windows[start] = window = new Workspace(store, cfg, TimeUtil.BucketOf(DateTimeOffset.Parse(start)));
+            if (archive is not null) inc.SimilarIncidents = archive.FindSimilar(inc);
             if (investigate)
             {
                 inc.Investigation = agent.Investigate(inc);
@@ -30,6 +31,7 @@ public static class Workflow
             inc.Timemachine = data;
         }
         if (save) store.ReplaceIncidents(incidents);
+        archive?.Add(incidents);
         return incidents;
     }
 }

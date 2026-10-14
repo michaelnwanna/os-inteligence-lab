@@ -87,6 +87,16 @@ public static class EvidenceBuilder
                     $"correlation score {c.Score:F2}. Correlation is evidence of association, not proof of causation.", data);
         }
 
+        foreach (var h in inc.SimilarIncidents.Take(2))
+        {
+            var onset = (string)h["onset"]!;
+            var recurring = h["recurring"] is true;
+            Add("H", "history",
+                $"A similar earlier incident {h["id"]} ({h["title"]}, onset {onset[..10]} {onset[11..16]} UTC) was recorded; similarity {(double)h["score"]!:F2} across " +
+                $"metric, cohort, failure signature and trigger type.{(recurring ? " This may be a recurrence." : "")}",
+                new() { ["id"] = h["id"], ["score"] = h["score"], ["recurring"] = recurring, ["onset"] = onset });
+        }
+
         foreach (var c in candidates.Take(3))
         {
             var where = repoName is not null && refRange is { } rr ? $" in {repoName} {rr.Base}..{rr.Head}" : "";

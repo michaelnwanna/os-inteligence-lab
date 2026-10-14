@@ -205,7 +205,7 @@ dotnet/                 C#/.NET edition (same scenarios, portal and API); see do
 make test       # 96 tests, ~40 s
 make lint
 make evaluate   # regenerate docs/benchmarks/RESULTS.md
-dotnet test dotnet/OsIntelligenceLab.sln   # 41 tests for the .NET edition
+dotnet test dotnet/OsIntelligenceLab.sln   # 57 tests for the .NET edition
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/coding-standards.md](docs/coding-standards.md). MIT licensed.

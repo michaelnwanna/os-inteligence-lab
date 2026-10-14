@@ -42,5 +42,25 @@ public static class Report
         return sb.ToString();
     }
 
+    /// <summary>(title, body) for a GitHub issue; facts and AI hypotheses are labelled separately.</summary>
+    public static (string Title, string Body) RenderIssue(Incident inc)
+    {
+        var inv = inc.Investigation;
+        var body = new List<string>
+        {
+            $"Automatically drafted by OS Intelligence Lab. Severity: **{inc.Severity}**.", "", "## Observed facts",
+        };
+        body.AddRange(inv is { ObservedFacts.Count: > 0 } ? inv.ObservedFacts.Select(e => $"- **{e.Id}** {e.Statement}") : new[] { "_No investigation data._" });
+        body.AddRange(new[] { "", "## AI-generated hypotheses (unverified)" });
+        if (inv is not null)
+        {
+            body.AddRange(inv.Hypotheses.Select(h => $"- ({h.Confidence} confidence) **{h.Title}**: {h.Rationale} _[{string.Join(", ", h.SupportingEvidence)}]_"));
+            body.AddRange(new[] { "", "## Suggested next steps" });
+            body.AddRange(inv.RecommendedSteps.Select(st => $"- {st.Step}"));
+        }
+        body.AddRange(new[] { "", "> Correlation is evidence, not proof of causation. Confirm with a rollback or bisect." });
+        return ($"[{inc.Id}] {inc.Title}", string.Join("\n", body));
+    }
+
     private static string Title(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 }

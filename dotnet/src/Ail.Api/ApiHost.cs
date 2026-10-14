@@ -26,6 +26,7 @@ public sealed class ApiOptions
     public string? ReadToken { get; set; } = Environment.GetEnvironmentVariable("AIL_READ_TOKEN");
     public double? RateLimit { get; set; } = double.TryParse(Environment.GetEnvironmentVariable("AIL_RATE_LIMIT"), out var r) ? r : null;
     public string[] Urls { get; set; } = Array.Empty<string>();
+    public string ArchivePath { get; set; } = Environment.GetEnvironmentVariable("AIL_ARCHIVE") ?? "data/archive.db";
 }
 
 /// <summary>Per-client token bucket for write endpoints.</summary>
@@ -132,12 +133,13 @@ public static class ApiHost
         var stream = new InMemoryStream();
         var processor = new StreamProcessor(stream, new IngestPipeline(store));
         var limiter = options.RateLimit is > 0 ? new RateLimiter(options.RateLimit.Value) : null;
+        var archive = new IncidentArchive(options.ArchivePath);
         var state = new State(store);
         var reg = MetricsRegistry.Instance;
         reg.Gauge("ail_queue_depth", () => stream.Depth);
         app.Lifetime.ApplicationStarted.Register(() => { if (!options.Inline) processor.Start(); });
         app.Lifetime.ApplicationStopping.Register(processor.Stop);
-        app.Lifetime.ApplicationStopped.Register(store.Dispose);
+        app.Lifetime.ApplicationStopped.Register(() => { store.Dispose(); archive.Dispose(); });
 
         app.Use(async (ctx, next) =>
         {
@@ -321,12 +323,17 @@ public static class ApiHost
             return Results.Json(Explore.Breakdown(ws, metric, ParseFilters(filters), window), AilJson.Options);
         });
         app.MapGet("/api/v1/changes", () => Results.Json(store.ListChanges(), AilJson.Options));
-        app.MapGet("/api/v1/query", () => Detail(501, "natural-language queries are only available in the Python edition"));
+        app.MapGet("/api/v1/query", (string? q) =>
+        {
+            if (q is null || q.Length < 3 || q.Length > 300) return Detail(422, "q must be between 3 and 300 characters");
+            var ws = state.Ws();
+            return Results.Json(Nlq.Answer(ws, Nlq.Parse(q, Nlq.VocabOf(ws)), store.ListIncidents()), AilJson.Options);
+        });
         app.MapPost("/api/v1/analyze", (HttpContext c) =>
         {
             if (!TokenOk(c, options.ApiToken)) return Detail(401, "missing or invalid API token");
             processor.Drain();
-            var found = Workflow.RunAnalysis(store, new DetectionConfig(), LlmProviders.Create());
+            var found = Workflow.RunAnalysis(store, new DetectionConfig(), LlmProviders.Create(), archive: archive);
             return Results.Json(new Dictionary<string, object> { ["incidents"] = found.Select(i => i.Id).ToList() }, AilJson.Options);
         });
 

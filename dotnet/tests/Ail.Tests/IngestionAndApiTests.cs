@@ -24,7 +24,7 @@ public sealed class ApiFixture : IAsyncDisposable
     {
         var app = ApiHost.Create(new ApiOptions
         {
-            DbPath = ":memory:", Inline = true, ApiToken = apiToken, ReadToken = readToken, RateLimit = rate,
+            DbPath = ":memory:", ArchivePath = ":memory:", Inline = true, ApiToken = apiToken, ReadToken = readToken, RateLimit = rate,
             Urls = new[] { "http://127.0.0.1:0" },
         });
         await app.StartAsync();

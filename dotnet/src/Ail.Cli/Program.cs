@@ -53,6 +53,9 @@ static class Cli
           analyze   [--db PATH] [--llm NAME] [--repo-mode auto|fixture|off] [--no-investigate]
           serve     [--db PATH] [--host H] [--port P]
           report    INCIDENT_ID [--db PATH]
+          issue     INCIDENT_ID [--db PATH] [--repo owner/name --create]
+          ask       QUESTION... [--db PATH]
+          history
           scenarios
           evaluate  [--devices N] [--seeds N] [--heldout] [--scenario ID] [--output FILE]
         """;
@@ -69,6 +72,9 @@ static class Cli
             case "serve": Serve(Opts.Parse(rest)); break;
             case "demo": Demo(Opts.Parse(rest, "serve")); break;
             case "report": Report(Opts.Parse(rest)); break;
+            case "ask": Ask(Opts.Parse(rest)); break;
+            case "history": History(); break;
+            case "issue": Issue(Opts.Parse(rest, "create")); break;
             case "evaluate": Evaluate(Opts.Parse(rest, "heldout")); break;
             default: Console.Error.WriteLine($"unknown command '{args[0]}'\n\n{Usage}"); return 2;
         }
@@ -132,7 +138,8 @@ static class Cli
     private static List<Incident> RunAnalysis(TelemetryStore store, Opts o)
     {
         var provider = LlmProviders.Create(o.Get("llm"));
-        return Workflow.RunAnalysis(store, new DetectionConfig(), provider, o.Get("repo-mode", "auto"), investigate: !o.Has("no-investigate"));
+        using var archive = new IncidentArchive(Environment.GetEnvironmentVariable("AIL_ARCHIVE") ?? "data/archive.db");
+        return Workflow.RunAnalysis(store, new DetectionConfig(), provider, o.Get("repo-mode", "auto"), investigate: !o.Has("no-investigate"), archive: archive);
     }
 
     private static void Analyze(Opts o)
@@ -176,6 +183,45 @@ static class Cli
         using var store = new TelemetryStore(o.Get("db", DefaultDb));
         var inc = store.GetIncident(o.Positional[0]) ?? throw new CliException($"incident {o.Positional[0]} not found");
         Console.WriteLine(Ail.Investigation.Report.RenderMarkdown(inc));
+    }
+
+    private static void Ask(Opts o)
+    {
+        if (o.Positional.Count == 0) throw new CliException("usage: ail ask QUESTION [--db PATH]");
+        using var store = new TelemetryStore(o.Get("db", DefaultDb));
+        var ws = new Workspace(store, new DetectionConfig());
+        var res = Nlq.Answer(ws, Nlq.Parse(string.Join(" ", o.Positional), Nlq.VocabOf(ws)), store.ListIncidents());
+        var q = (Dictionary<string, object?>)res["query"]!;
+        var window = (string[])res["window"]!;
+        Console.WriteLine($"Understood: metric={q["metric"]} include={string.Join(",", ((Dictionary<string, string>)q["include"]!).Select(kv => $"{kv.Key}={kv.Value}"))} " +
+                          $"exclude={string.Join(";", ((List<Dictionary<string, string>>)q["exclude"]!).Select(d => string.Join(",", d.Select(kv => $"{kv.Key}={kv.Value}"))))} window={window[0]}-{window[1]} UTC");
+        foreach (var note in (List<string>)q["notes"]!) Console.WriteLine($"  note: {note}");
+        Console.WriteLine(res["answer"]);
+        foreach (var i in (List<Dictionary<string, object?>>)res["incidents"]!) Console.WriteLine($"  {i["id"]}  {i["title"]} [{i["severity"]}]");
+    }
+
+    private static void History()
+    {
+        using var archive = new IncidentArchive(Environment.GetEnvironmentVariable("AIL_ARCHIVE") ?? "data/archive.db");
+        var past = archive.All();
+        if (past.Count == 0) Console.WriteLine("The archive is empty. Run `ail analyze` or `ail demo` first.");
+        foreach (var inc in past)
+            Console.WriteLine($"{inc.Id}  {inc.Title}  [{inc.Severity}]  onset {inc.Onset:yyyy-MM-dd HH:mm}  data {inc.Reproducibility.GetValueOrDefault("data_fingerprint")}");
+    }
+
+    private static void Issue(Opts o)
+    {
+        if (o.Positional.Count != 1) throw new CliException("usage: ail issue INCIDENT_ID [--db PATH] [--repo owner/name --create]");
+        using var store = new TelemetryStore(o.Get("db", DefaultDb));
+        var inc = store.GetIncident(o.Positional[0]) ?? throw new CliException($"incident {o.Positional[0]} not found");
+        var (title, body) = Ail.Investigation.Report.RenderIssue(inc);
+        if (!o.Has("create"))
+        {
+            Console.WriteLine($"# {title}\n\n{body}\n\n(dry run: pass --create with --repo owner/name to open the issue)");
+            return;
+        }
+        var repo = o.Get("repo") ?? throw new CliException("--repo owner/name is required with --create");
+        Console.WriteLine(new GitHubRepo(repo).CreateIssue(title, body, new[] { "os-intelligence-lab" }));
     }
 
     private static void Evaluate(Opts o)
