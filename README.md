@@ -1,5 +1,7 @@
 # OS Intelligence Lab
 
+[![CI](https://github.com/michaelnwanna/os-inteligence-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelnwanna/os-inteligence-lab/actions/workflows/ci.yml)
+
 **AI-powered failure intelligence for complex software systems.**
 
 Detect regressions. Discover affected cohorts. Correlate changes. Investigate source code. Explain what happened.
@@ -142,7 +144,7 @@ To send real signals from your own machine, use the opt-in agent (`ail agent enr
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0 Foundation | Done | Docs, ADRs, threat model, CI, one-command build. The CI workflow (tests on three Python versions, agent on three operating systems, dependency audit, secret scan, Docker build and start) and the Dockerfile have not yet run on GitHub. |
+| 0 Foundation | Done | Docs, ADRs, threat model, CI, one-command build. CI passes on GitHub (commit `c73d427`): tests on Python 3.10, 3.12 and 3.13, the agent on Ubuntu, macOS and Windows, dependency audit, secret scan, and a Docker image that builds, starts and serves the demo incident. |
 | 1 Telemetry playground | Done | Simulator, scenarios, ingestion API, store, aggregation, dashboard. |
 | 2 Anomaly intelligence | Done | Five detectors, severity, evidence, reproducible results. Multi-episode: an incident that recovers is marked resolved and the engine re-baselines to find later ones; simultaneous unrelated regressions become separate incidents. |
 | 3 Cohort intelligence | Done | Scan statistic and explorer; finds the injected cohort without hints. |
@@ -150,7 +152,7 @@ To send real signals from your own machine, use the opt-in agent (`ail agent enr
 | 5 AI investigation agent | Done | Grounded, provider-neutral; offline provider by default. |
 | 6 GitHub code intelligence | Partial | Read-only REST client, commit ranking, issue drafting. Not done: GitHub OAuth, repository picker UI, LLM-driven diff reading. |
 | 7 Failure Time Machine | Done | Play, pause, accelerate, rewind, step, per-stage evidence. |
-| 8 Real machine agent | Partial | Opt-in local agent with consent, preview and revoke. Run and tested on macOS; the Linux and Windows collectors are parser-tested on fixtures and are exercised by a CI matrix that has not yet run. The exit criterion (two real operating systems sending data) is not yet demonstrated. |
+| 8 Real machine agent | Done in CI | Opt-in local agent with consent, preview and revoke. The real collectors ran on Ubuntu, macOS and Windows GitHub runners and fed the same backend schema (in-process ingestion on virtual machines). Run by hand on a Mac; not yet on physical Linux or Windows hardware. |
 | 9 Intelligence platform | Partial | Done: historical incident retrieval and recurring-regression detection, failure-signature similarity, natural-language telemetry query, re-baselining after recovery. Not started: anomaly clustering, detector ensembles, forecast-based and seasonal baselines, dependency intelligence, automated experiment generation. |
 
 Deliberate deviations from the suggested stack are recorded in [docs/adr](docs/adr): SQLite instead of PostgreSQL/Redis for the first cut, an in-memory stream instead of Redis Streams, and a dependency-free portal instead of Next.js.
@@ -159,7 +161,7 @@ Deliberate deviations from the suggested stack are recorded in [docs/adr](docs/a
 
 Ordered by value for the least effort. Already done: CI matrix for the agent on three operating systems, dependency audit and secret scanning in CI, read-endpoint token (`AIL_READ_TOKEN`), per-client rate limiting (`AIL_RATE_LIMIT`), re-baselining after recovery, separate incidents for simultaneous regressions, and the cohort false positive that the earlier benchmark exposed.
 
-1. **See CI go green on GitHub.** The workflow (including the three-OS agent job and the Docker start check) was written and its YAML validated, but it has never run. Push, read the results, fix what breaks, then add a build badge. A green Linux and Windows agent job is the evidence for the Phase 8 exit criterion; a run on a physical Linux or Windows machine is better still.
+1. **Run the agent on physical Linux and Windows machines**, pointing it at a server on your network. CI shows the collectors work on those operating systems; it does not show the agent talking to a remote backend, and virtual machines hide things like laptop power states.
 2. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
 3. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
 4. **Add held-out scenarios.** The thresholds were tuned against the current ten scenarios. Write a new batch (different populations, effect sizes, durations, noisy baselines) without touching the detector settings and report those numbers separately.

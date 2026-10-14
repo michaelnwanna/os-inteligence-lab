@@ -33,7 +33,7 @@ Names, hostnames, serial numbers, file paths or contents, process lists, network
 | macOS | `vm_stat` (active + wired + compressor pages) and `sysctl hw.memsize` | load average / cores |
 | Windows | `GlobalMemoryStatusEx` | `GetSystemTimes` delta over 0.5 s |
 
-Status: macOS is exercised by the tests and was run on a real machine while building this. The Linux and Windows code paths are covered by parser tests on fixture text (Linux, macOS) and are otherwise **untested on real Linux or Windows hosts**. The Phase 8 exit criterion (two operating systems sending data) is therefore not yet demonstrated.
+Status: the real collectors run on Linux, macOS and Windows in CI. On commit `c73d427` the `agent` job passed on GitHub-hosted Ubuntu, macOS and Windows runners: the live-collector tests passed on each, `ail agent preview` printed a valid payload, and an end-to-end test sent each OS's real heartbeat, CPU and memory events through the ingestion pipeline into the same schema. Two caveats: the ingestion in that test is in-process (the agent and server run in one process, not across a network), and the runners are virtual machines, not personal hardware. macOS was also run by hand on a real laptop; Linux and Windows have not been run on physical machines.
 
 ## Sending to a protected backend
 Set `AIL_API_TOKEN` in the agent's environment; it is sent as a bearer token and never written to disk by the agent.
