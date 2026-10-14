@@ -25,9 +25,7 @@ public class ScenarioTests
         Assert.All(r.TriggerRank, rank => Assert.Equal(1, rank));
         Assert.All(r.AiValid, ok => Assert.True(ok, "rules report must pass the grounding validator"));
         Assert.All(r.CulpritTop1, ok => Assert.True(ok, "injected commit must be ranked first"));
-        // A second, simultaneous regression can be flagged a few minutes early because the fleet-level alarm raised by
-        // the first one is shared (the Python engine behaves the same way), hence the small negative allowance.
-        Assert.All(r.Latencies, l => Assert.InRange(l, -5, 30));
+        Assert.All(r.Latencies, l => Assert.InRange(l, 0, 30));
     }
 
     [Fact]

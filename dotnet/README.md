@@ -42,10 +42,6 @@ repository providers (only the fixture repository), and `ail stream` / `ail issu
 
 The algorithms are the same, but the random number generator is not, so the simulated telemetry is statistically
 equivalent rather than identical and numbers will not match run for run. Measured results are in
-[docs/benchmarks/RESULTS-dotnet.md](../docs/benchmarks/RESULTS-dotnet.md): the ten scenarios x 3 seeds all had the
-true cohort and the true change ranked first, with one false incident (precision 0.97) on a clean run. The Python edition
-had none on the same scenarios, and 15 further clean runs gave 1 false incident for .NET and 0 for Python, which is too few
-to say whether the difference is real.
-
-One behaviour is shared by both editions: when two regressions overlap, the second incident's first-detection time can
-precede its own effect start by a few minutes, because the fleet-level alarm raised by the first is reused.
+[docs/benchmarks/RESULTS-dotnet.md](../docs/benchmarks/RESULTS-dotnet.md): all ten scenarios x 3 seeds had the true cohort and
+the true change ranked first, with one false incident on a clean run (precision 0.97). Over 55 clean seeds (benchmark seeds included) the .NET
+edition raised 2 false incidents and Python 1, so both have a false-alarm rate of a few percent per clean run.

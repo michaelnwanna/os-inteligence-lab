@@ -95,14 +95,14 @@ From `ail evaluate` (10 scenarios x 3 seeds, 50,000 devices each, 30 injected re
 | Metric | Result |
 |---|---|
 | Incident precision / recall | 1.00 / 1.00 |
-| False-positive rate on clean runs | 0 of 6 |
+| False-positive rate on clean runs | 0 of 6 (1 of 40 on a further 40 seeds of scenario-001) |
 | Detection latency from effect start (median / max) | 4 / 6 minutes |
 | Cohort identification (exact dimensions) | 30 of 30 |
 | True change ranked top-1 | 30 of 30 |
 | Agent reports passing grounding validation | 30 of 30 |
 | Injected commit ranked first | 6 of 6 |
 
-These are results on *synthetic* scenarios designed by the authors, and the detector thresholds were tuned while developing against them (an earlier version missed one cohort, which led to the `expectation_margin` setting). Treat them as proof that the engine does what it claims, not as a forecast of accuracy on your fleet; held-out scenarios and real telemetry are the real test.
+These are results on *synthetic* scenarios designed by the authors, and the detector thresholds were tuned while developing against them (an earlier version missed one cohort, which led to the `expectation_margin` setting). Six clean runs are too few to estimate a false-alarm rate; 40 more seeds of the clean scenario gave one false incident, so expect roughly 1 in 40 to 1 in 20. Treat them as proof that the engine does what it claims, not as a forecast of accuracy on your fleet; held-out scenarios and real telemetry are the real test.
 
 ## Principles
 

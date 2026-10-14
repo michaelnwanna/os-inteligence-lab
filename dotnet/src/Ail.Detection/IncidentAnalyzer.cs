@@ -144,14 +144,15 @@ public static class IncidentAnalyzer
         var cube = ws.Cube(metric); var scanner = ws.Scanner(metric);
         var last = ws.T - 1;
         var detected = group.Min(c => c.Detected);
+        int? ownAlarm = null;
         var onset = Math.Min(detected, group.Min(c => c.Onset));
         var allResults = group.SelectMany(c => c.Results).OrderBy(r => r.Timestamp).ToList();
 
         // The cohort that raised the alarm defines "recovered"; scanning all remaining history would dilute it.
+        var alarmDims = primary.Results.Where(IsCohortScan).Select(r => r.Dimensions).FirstOrDefault();
         bool[] seedMask;
         if (pick == 0)
         {
-            var alarmDims = primary.Results.Where(IsCohortScan).Select(r => r.Dimensions).FirstOrDefault();
             seedMask = alarmDims is { Count: > 0 } ? cube.Mask(alarmDims) : Enumerable.Repeat(true, cube.C).ToArray();
         }
         else
@@ -177,12 +178,19 @@ public static class IncidentAnalyzer
         var cohorts = findings.Count > 0 ? new[] { findings[idx].Finding }.Concat(findings.Where((_, i) => i != idx).Select(f => f.Finding)).ToList() : new List<CohortFinding>();
         var focus = cohorts.FirstOrDefault();
         var dims = focus?.Dimensions ?? new Dictionary<string, string>();
+        // The shared alarm may have come from another cohort; detection is when this cohort alarms with the others removed.
+        if (focus is not null && others.Any(x => x) && alarmDims is { Count: > 0 } && !DimsCompatible(alarmDims, dims)
+            && scanner.FirstAlarm(null, others) is { } own && DimsCompatible(own.Finding.Dimensions, dims) && own.Index > detected)
+        {
+            detected = own.Index;
+            ownAlarm = own.Index;
+        }
         if (focus is not null) onset = Math.Min(detected, scanner.Onset(mask!, end)); // the cohort's own change point is sharper
 
         var results = allResults.Where(r => !IsCohortScan(r) || r.Dimensions.OrderBy(k => k.Key).SequenceEqual(dims.OrderBy(k => k.Key))).ToList();
         var confirmCandidates = results.Where(r => r.Evidence.TryGetValue("confirmed", out var v) && v is true)
             .Select(r => Idx(r, "alarm_minute_index") + cfg.ConfirmMinutes).ToList();
-        int? confirmed = confirmCandidates.Count > 0 ? confirmCandidates.Min() : null;
+        int? confirmed = ownAlarm is { } sa ? sa + cfg.ConfirmMinutes : confirmCandidates.Count > 0 ? confirmCandidates.Min() : null;
 
         var series = cube.Series();
         var baseline = Stats.FitBaseline(series, ws.BaselineEnd);

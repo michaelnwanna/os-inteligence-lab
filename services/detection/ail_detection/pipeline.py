@@ -146,8 +146,8 @@ def _build_incident(ws: Workspace, group: list[_Cluster], changes: list[ChangeEv
 
     # The cohort that raised the alarm defines "recovered"; scanning the whole remaining history
     # would dilute it with later, unrelated episodes.
+    alarm_dims = next((r.dimensions for r in primary.results if r.detector == "CohortScanDetector"), None)
     if pick == 0:
-        alarm_dims = next((r.dimensions for r in primary.results if r.detector == "CohortScanDetector"), None)
         seed_mask = cube.mask(alarm_dims) if alarm_dims else np.ones(cube.C, dtype=bool)
     else:
         _, seed_mask = seeded[pick]
@@ -171,13 +171,20 @@ def _build_incident(ws: Workspace, group: list[_Cluster], changes: list[ChangeEv
     cohorts = [findings[idx][0]] + [f for i, (f, _) in enumerate(findings) if i != idx] if findings else []
     dims = cohorts[0].dimensions if cohorts else {}
     focus = cohorts[0] if cohorts else None
+    own_alarm = None
+    if focus and others.any() and alarm_dims and not _dims_compatible(alarm_dims, dims):
+        # The shared alarm came from another cohort; detection is when this one alarms with the others removed.
+        own = scanner.first_alarm(exclude=others)
+        if own and _dims_compatible(own[1].dimensions, dims) and own[0] > detected:
+            detected = own_alarm = own[0]
     if focus:  # the cohort's own change point is sharper than the fleet-wide one
         onset = min(detected, scanner.onset(mask, end))
 
     results = [r for r in all_results if r.detector != "CohortScanDetector" or r.dimensions == dims]
     confirm_candidates = [r.evidence["alarm_minute_index"] + cfg.confirm_minutes
                           for r in results if r.evidence.get("confirmed") is True]
-    confirmed = min(confirm_candidates) if confirm_candidates else None
+    confirmed = own_alarm + cfg.confirm_minutes if own_alarm is not None else (
+        min(confirm_candidates) if confirm_candidates else None)
 
     series = cube.series()
     base = fit_baseline(series, ws.baseline_end)

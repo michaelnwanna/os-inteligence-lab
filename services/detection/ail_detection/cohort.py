@@ -178,14 +178,15 @@ class CohortScanner:
             llr = np.where(o > e, (o - e) ** 2 / (2 * self.sigma2 * np.maximum(n, 1.0)), 0.0)
         return int(tau[len(tau) - 1 - int(np.argmax(llr[::-1]))])
 
-    def first_alarm(self, start: int | None = None) -> tuple[int, CohortFinding, np.ndarray] | None:
+    def first_alarm(self, start: int | None = None, exclude: np.ndarray | None = None,
+                    ) -> tuple[int, CohortFinding, np.ndarray] | None:
         """Causal scan: first minute at which the same significant cohort tops the scan on
         `consecutive` successive minutes."""
         cfg = self.cfg
         prev, run = None, 0
         for i in range(start if start is not None else self.baseline_end, self.cube.T):
             i0 = max(self.baseline_end, i - cfg.window_minutes + 1)
-            res = self.scan(i0, i + 1, top_k=1)
+            res = self.scan(i0, i + 1, top_k=1, exclude=exclude)
             if not res:
                 prev, run = None, 0
                 continue

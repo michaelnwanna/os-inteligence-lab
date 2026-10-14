@@ -234,13 +234,13 @@ public sealed class CohortScanner
     }
 
     /// <summary>Causal scan: first minute at which the same significant cohort tops the scan on `Consecutive` successive minutes.</summary>
-    public (int Index, CohortFinding Finding, bool[] Mask)? FirstAlarm(int? start = null)
+    public (int Index, CohortFinding Finding, bool[] Mask)? FirstAlarm(int? start = null, bool[]? exclude = null)
     {
         string? prev = null; var run = 0;
         for (var i = start ?? BaselineEnd; i < _cube.T; i++)
         {
             var i0 = Math.Max(BaselineEnd, i - _cfg.WindowMinutes + 1);
-            var res = Scan(i0, i + 1, 1);
+            var res = Scan(i0, i + 1, 1, exclude);
             if (res.Count == 0) { prev = null; run = 0; continue; }
             var (finding, mask) = res[0];
             var key = string.Join(";", finding.Dimensions.OrderBy(kv => kv.Key).Select(kv => kv.Key + "=" + kv.Value));
