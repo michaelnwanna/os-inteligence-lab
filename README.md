@@ -14,6 +14,14 @@ make demo        # creates a venv, simulates 100,000 devices, finds the regressi
 
 Then open <http://127.0.0.1:8000/#/timemachine> and press **Play**.
 
+![Failure Time Machine replaying the ARM64 + App 2.1 incident](docs/images/time-machine.png)
+
+| Command Center | Investigation |
+|---|---|
+| ![Command Center](docs/images/command-center.png) | ![Incident AIL-1001](docs/images/investigation.png) |
+
+Screenshots are of the demo run with 50,000 simulated devices.
+
 ## The flagship demo: ARM64 memory regression
 
 Atlas 2.1 is rolled out to 20% of a 100,000-device fleet at 13:52. A memory defect makes ARM64 devices run out of memory. The ARM64 + App 2.1 cohort is only ~3.5% of sessions, so the fleet-wide failure rate barely moves (0.38% to 0.67%). The platform, with no hints about where to look:
@@ -164,7 +172,7 @@ Ordered by value for the least effort. Already done: CI matrix for the agent on 
 
 1. **Run the agent on physical Linux and Windows machines**, pointing it at a server on your network. CI shows the collectors work on those operating systems; it does not show the agent talking to a remote backend, and virtual machines hide things like laptop power states.
 2. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
-3. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
+3. **Record a short screen capture** of the Failure Time Machine playing (screenshots are in the README; a recording is not).
 4. **Fix overlapping-cohort grouping.** `heldout-09` seed 109 shows that regressions whose cohorts overlap and whose onsets are close are merged into one incident (cohorts count as compatible when no dimension conflicts). Decide on a rule, fix it, then write a fresh batch of scenarios to check the fix, because `heldout-09` will have become tuning data.
 5. **Handle a regression present from the start.** Re-baselining solves recurrence, but a baseline that already contains the problem hides it. Compare against peer cohorts or a previous release's baseline, and add a seasonal (daily/weekly) baseline for long-running fleets. This also unlocks forecast-based detection and anomaly clustering from Phase 9.
 6. **Finish Phase 6.** GitHub App or OAuth instead of a personal token, a repository picker in the portal, and LLM-assisted reading of the top candidate diffs (still validated against the evidence).
