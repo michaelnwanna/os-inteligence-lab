@@ -66,7 +66,8 @@ class CohortScanner:
             level = est[inv]
         return level
 
-    def scan(self, i0: int, i1: int, top_k: int | None = None) -> list[tuple[CohortFinding, np.ndarray]]:
+    def scan(self, i0: int, i1: int, top_k: int | None = None, exclude: np.ndarray | None = None,
+             refine: bool = True) -> list[tuple[CohortFinding, np.ndarray]]:
         cube, cfg = self.cube, self.cfg
         nw, kw, sw, _ = cube.window(i0, i1)
         N = nw.copy()
@@ -74,6 +75,9 @@ class CohortScanner:
         E = nw * self.level
         total_n = float(N.sum())
         total_excess = float((O - E).sum())
+        claimed = np.zeros(cube.C, dtype=bool) if exclude is None else exclude.copy()
+        N[claimed] = O[claimed] = E[claimed] = 0.0
+        full_masks: list[np.ndarray] = []
         out: list[tuple[CohortFinding, np.ndarray]] = []
         for rank in range(1, (top_k or cfg.top_k) + 1):
             Ot, Et = float(O.sum()), float(E.sum())
@@ -85,6 +89,8 @@ class CohortScanner:
                 # elevated too, the expectation is scaled up so only *excess* elevation counts.
                 out_ratio = np.where(Et - Eg > 1e-9, (Ot - Og) / np.maximum(Et - Eg, 1e-9), 1.0)
                 adj_e = np.maximum(Eg * np.maximum(out_ratio, 1.0), 1e-12)
+                if cube.kind == "rate":
+                    adj_e = adj_e * (1 + cfg.expectation_margin)
                 ratio = Og / adj_e
                 if cube.kind == "rate":
                     llr = Og * np.log(np.maximum(Og, 1e-12) / adj_e) - Og + adj_e
@@ -105,7 +111,8 @@ class CohortScanner:
             p = min(1.0, self.n_candidates * 0.5 * math.erfc(math.sqrt(max(llr_v, 0.0))))
             if p > cfg.alpha:
                 break
-            mask = inv == j
+            mask = (inv == j) & ~claimed
+            full_masks.append(inv == j)
             first = int(np.nonzero(mask)[0][0])
             dims = {DIMENSIONS[c]: cube.vocab[DIMENSIONS[c]][int(cube.codes[first, c])] for c in combo}
             observed, baseline = og / ng, eg / ng
@@ -122,6 +129,19 @@ class CohortScanner:
                 mask,
             ))
             N[mask] = O[mask] = E[mask] = 0.0
+            claimed |= mask
+        if refine and len(out) >= 2:
+            # backfit: re-pick each cohort with the others' cells removed, so overlapping regressions
+            # (e.g. a driver and an app version sharing some devices) are not blended into one cohort
+            for i in range(len(out)):
+                others = np.zeros(cube.C, dtype=bool)
+                for j, m in enumerate(full_masks):
+                    if j != i:
+                        others |= m
+                again = self.scan(i0, i1, top_k=1, exclude=others, refine=False)
+                if again:
+                    out[i] = (again[0][0].model_copy(update={"rank": out[i][0].rank}), again[0][1])
+                    full_masks[i] = again[0][1]
         return out
 
     def evaluate(self, mask: np.ndarray, i0: int, i1: int) -> dict[str, float]:

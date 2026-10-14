@@ -41,7 +41,7 @@ Exact minutes vary with the seed; run it and see.
 make demo                         # one command: setup + simulate + analyze + serve
 # or step by step
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/ail scenarios           # list the eight ground-truth scenarios
+.venv/bin/ail scenarios           # list the ten ground-truth scenarios
 .venv/bin/ail demo                # simulate + analyze (no server)
 .venv/bin/ail report AIL-1001 --db data/demo.db
 .venv/bin/ail serve --db data/demo.db
@@ -87,19 +87,19 @@ flowchart TD
 
 ## Measured quality
 
-From `ail evaluate` (8 scenarios x 3 seeds, 50,000 devices each; full table in [docs/benchmarks/RESULTS.md](docs/benchmarks/RESULTS.md)):
+From `ail evaluate` (10 scenarios x 3 seeds, 50,000 devices each, 30 injected regressions; full table in [docs/benchmarks/RESULTS.md](docs/benchmarks/RESULTS.md)):
 
 | Metric | Result |
 |---|---|
 | Incident precision / recall | 1.00 / 1.00 |
 | False-positive rate on clean runs | 0 of 6 |
-| Detection latency from effect start (median / max) | 4 / 5 minutes |
-| Cohort identification (exact dimensions) | 17 of 18 |
-| True change ranked top-1 | 18 of 18 |
-| Agent reports passing grounding validation | 18 of 18 |
+| Detection latency from effect start (median / max) | 4 / 6 minutes |
+| Cohort identification (exact dimensions) | 30 of 30 |
+| True change ranked top-1 | 30 of 30 |
+| Agent reports passing grounding validation | 30 of 30 |
 | Injected commit ranked first | 6 of 6 |
 
-These are results on *synthetic* scenarios designed by the authors, so they show the engine does what it claims, not how it will do on your fleet. The one cohort miss (a global regression with a spurious small cohort on one seed) is left in the table on purpose.
+These are results on *synthetic* scenarios designed by the authors, and the detector thresholds were tuned while developing against them (an earlier version missed one cohort, which led to the `expectation_margin` setting). Treat them as proof that the engine does what it claims, not as a forecast of accuracy on your fleet; held-out scenarios and real telemetry are the real test.
 
 ## Principles
 
@@ -142,35 +142,33 @@ To send real signals from your own machine, use the opt-in agent (`ail agent enr
 
 | Phase | Status | Notes |
 |---|---|---|
-| 0 Foundation | Done | Docs, ADRs, threat model, CI, one-command build. Docker files are provided but were not built in the authoring environment. |
+| 0 Foundation | Done | Docs, ADRs, threat model, CI, one-command build. The CI workflow (tests on three Python versions, agent on three operating systems, dependency audit, secret scan, Docker build and start) and the Dockerfile have not yet run on GitHub. |
 | 1 Telemetry playground | Done | Simulator, scenarios, ingestion API, store, aggregation, dashboard. |
-| 2 Anomaly intelligence | Done | Five detectors, severity, evidence, reproducible results. |
+| 2 Anomaly intelligence | Done | Five detectors, severity, evidence, reproducible results. Multi-episode: an incident that recovers is marked resolved and the engine re-baselines to find later ones; simultaneous unrelated regressions become separate incidents. |
 | 3 Cohort intelligence | Done | Scan statistic and explorer; finds the injected cohort without hints. |
 | 4 Change correlation | Done | Ranked candidates, presented as correlation. |
 | 5 AI investigation agent | Done | Grounded, provider-neutral; offline provider by default. |
 | 6 GitHub code intelligence | Partial | Read-only REST client, commit ranking, issue drafting. Not done: GitHub OAuth, repository picker UI, LLM-driven diff reading. |
 | 7 Failure Time Machine | Done | Play, pause, accelerate, rewind, step, per-stage evidence. |
-| 8 Real machine agent | Partial | Opt-in local agent with consent, preview and revoke; collectors for macOS (run and tested here), Linux and Windows (parsers tested on fixtures, not run on those systems). The exit criterion (two real operating systems sending data) has not been demonstrated. |
-| 9 Intelligence platform | Partial | Done: historical incident retrieval and recurring-regression detection, failure-signature similarity, natural-language telemetry query. Not started: anomaly clustering, detector ensembles, adaptive baselines, forecast-based detection, dependency intelligence, automated experiment generation. |
+| 8 Real machine agent | Partial | Opt-in local agent with consent, preview and revoke. Run and tested on macOS; the Linux and Windows collectors are parser-tested on fixtures and are exercised by a CI matrix that has not yet run. The exit criterion (two real operating systems sending data) is not yet demonstrated. |
+| 9 Intelligence platform | Partial | Done: historical incident retrieval and recurring-regression detection, failure-signature similarity, natural-language telemetry query, re-baselining after recovery. Not started: anomaly clustering, detector ensembles, forecast-based and seasonal baselines, dependency intelligence, automated experiment generation. |
 
 Deliberate deviations from the suggested stack are recorded in [docs/adr](docs/adr): SQLite instead of PostgreSQL/Redis for the first cut, an in-memory stream instead of Redis Streams, and a dependency-free portal instead of Next.js.
 
 ## Recommended next steps
 
-Ordered by value for the least effort. Items 1 to 4 close gaps in claims made above.
+Ordered by value for the least effort. Already done: CI matrix for the agent on three operating systems, dependency audit and secret scanning in CI, read-endpoint token (`AIL_READ_TOKEN`), per-client rate limiting (`AIL_RATE_LIMIT`), re-baselining after recovery, separate incidents for simultaneous regressions, and the cohort false positive that the earlier benchmark exposed.
 
-1. **Prove Phase 8 on a second OS.** Add a CI matrix job that runs `ail agent enroll --yes`, `preview` and a short `run` against a local server on `ubuntu`, `windows` and `macos` runners, then run the agent on a real Linux or Windows machine. Until then the Linux and Windows collectors are fixture-tested only.
-2. **Run CI and the Docker build on GitHub.** The workflow and Dockerfile exist but have not run. Fix whatever breaks, then add a build badge.
-3. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
-4. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
-5. **Finish Phase 6.** GitHub App or OAuth instead of a personal token, a repository picker in the portal, and LLM-assisted reading of the top candidate diffs (still validated against the evidence).
-6. **Remove the fixed-baseline limit.** Add an adaptive (rolling or seasonal) baseline so a regression present from the start, a second episode on the same metric, and long-running fleets are handled. This is the most important detection gap; it also unlocks forecast-based detection and anomaly clustering from Phase 9.
-7. **Tighten the one cohort miss.** The benchmark's single wrong cohort (a global regression on one seed) suggests the global-versus-cohort test needs a stricter threshold or an explicit "broad regression" check. Add more scenarios: overlapping regressions, two simultaneous deployments, a regression present from the start.
-8. **Harden for exposure beyond localhost.** Authentication on read endpoints, per-client rate limiting, `pip-audit` and secret scanning in CI, dependency pinning.
-9. **Scale the backend.** Implement `TelemetryStore` for PostgreSQL or ClickHouse and `EventStream` for Redis Streams, add an HTTP-level load test, and publish a benchmark for the 10 million stored events target.
-10. **Portal quality.** Browser tests (Playwright) for the five views and the time machine, an accessibility pass, and a decision on whether to move to a framework (ADR 0005 describes the trigger).
-
-The rest of Phase 9 (detector ensembles, dependency intelligence, automated experiment generation) is best tackled after item 6.
+1. **See CI go green on GitHub.** The workflow (including the three-OS agent job and the Docker start check) was written and its YAML validated, but it has never run. Push, read the results, fix what breaks, then add a build badge. A green Linux and Windows agent job is the evidence for the Phase 8 exit criterion; a run on a physical Linux or Windows machine is better still.
+2. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
+3. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
+4. **Add held-out scenarios.** The thresholds were tuned against the current ten scenarios. Write a new batch (different populations, effect sizes, durations, noisy baselines) without touching the detector settings and report those numbers separately.
+5. **Handle a regression present from the start.** Re-baselining solves recurrence, but a baseline that already contains the problem hides it. Compare against peer cohorts or a previous release's baseline, and add a seasonal (daily/weekly) baseline for long-running fleets. This also unlocks forecast-based detection and anomaly clustering from Phase 9.
+6. **Finish Phase 6.** GitHub App or OAuth instead of a personal token, a repository picker in the portal, and LLM-assisted reading of the top candidate diffs (still validated against the evidence).
+7. **Harden further.** Dependency pinning with hashes, authentication that is not a shared token (per-user, scoped), trusted-proxy handling for the rate limiter's client address, and an external review of the agent.
+8. **Scale the backend.** Implement `TelemetryStore` for PostgreSQL or ClickHouse and `EventStream` for Redis Streams, add an HTTP-level load test, and publish a benchmark for the 10 million stored events target.
+9. **Portal quality.** Browser tests (Playwright) for the five views and the time machine, an accessibility pass, and a decision on whether to move to a framework (ADR 0005 describes the trigger).
+10. **Rest of Phase 9.** Detector ensembles, dependency intelligence, automated experiment generation; best after item 5.
 
 ## Repository layout
 
@@ -192,7 +190,7 @@ tests/                  unit and acceptance tests
 ## Development
 
 ```bash
-make test       # 86 tests, ~40 s
+make test       # 95 tests, ~40 s
 make lint
 make evaluate   # regenerate docs/benchmarks/RESULTS.md
 ```

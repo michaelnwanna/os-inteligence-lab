@@ -17,6 +17,7 @@ class CohortConfig(BaseModel):
     min_events: float = 15  # minimum observed failures (rate metrics)
     min_ratio_rate: float = 1.5  # cohort vs. the rest of the population, after baseline adjustment
     min_ratio_gauge: float = 1.1
+    expectation_margin: float = 0.25  # rate expectations are estimates; require this much headroom before alerting
     prior_sessions_rate: float = 20_000  # shrinkage strength of the baseline hierarchy
     prior_sessions_gauge: float = 500
     consecutive: int = 2  # consecutive scans naming the same cohort before alerting
@@ -49,6 +50,8 @@ class DetectionConfig(BaseModel):
     merge_minutes: int = 30  # results this close in time belong to one anomaly
     incident_onset_minutes: int = 20  # anomalies on different metrics this close share an incident
     recovery_z: float = 2.0
+    recovery_minutes: int = 15  # a clean window this long marks an incident as recovered
+    rebaseline_gap_minutes: int = 5  # data skipped after a recovery before the next baseline starts
     pipeline_stage_minutes: int = 2  # simulated clock cost of each post-detection analysis stage
     cohort: CohortConfig = Field(default_factory=CohortConfig)
     correlation: CorrelationConfig = Field(default_factory=CorrelationConfig)

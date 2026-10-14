@@ -46,7 +46,7 @@ Raw events are stored as well when they arrive through the API (de-duplicated by
 1. **Baseline.** The first `baseline_minutes` (60) of data fix a baseline level, a dispersion factor and, for gauges, a standard deviation.
 2. **Detectors** run on the fleet-wide series for every metric. Each is causal (uses data up to minute *t* only) and an alarm must persist `confirm_minutes` to be kept.
 3. **Cohort scan** runs every minute on a trailing window and alerts when the same significant cohort tops the scan on consecutive minutes.
-4. **Incident builder** groups results by metric and by onset/cohort compatibility, then applies a practical-significance gate (statistical significance alone is not enough).
+4. **Incident builder** groups results by metric and by onset/cohort compatibility, then applies a practical-significance gate (statistical significance alone is not enough). It measures recovery, splits unrelated simultaneous cohorts into separate incidents, and re-baselines after a recovery to look for later episodes.
 5. **Correlation** scores every recorded change.
 6. **Investigation** recalls similar earlier incidents from the archive, builds evidence, asks the LLM provider for hypotheses, validates them and assembles the report and Failure Time Machine data. The incident is then added to the archive (`AIL_ARCHIVE`, default `data/archive.db`).
 
@@ -80,10 +80,10 @@ Details and the reasoning behind each choice are in [detection-methods.md](detec
 
 ## Known limits
 
-- One anomaly episode per metric per run (a second, later episode on the same metric is not separated).
-- Baseline is a fixed warm-up window, so a regression present from the start is invisible to the baseline-based detectors.
+- One anomaly episode per metric *per analysis window*. Later episodes are found only after the earlier ones have recovered and the engine re-baselines.
+- Baseline is a fixed warm-up window at the start of each window, so a regression already present when it begins is invisible to the baseline-based detectors.
 - Single-node SQLite; the 100K+ events/s target needs the streaming and columnar-store work in the roadmap.
 - Incident ids are per analysis run (`AIL-1001` restarts each time), so recalled incidents are cited with their onset time.
-- Read endpoints are unauthenticated by default; only writes accept the bearer token.
+- Read endpoints are open by default; set `AIL_READ_TOKEN` to require a bearer token (the portal prompts for it). Writes accept `AIL_API_TOKEN`; `AIL_RATE_LIMIT` (requests/s per client address) enables throttling. The limiter keys on the socket address, so behind a proxy it sees the proxy.
 - The natural-language parser is rule based: it understands metric, window, and include/exclude cohorts, not arbitrary questions.
 - The local agent is verified on macOS only.

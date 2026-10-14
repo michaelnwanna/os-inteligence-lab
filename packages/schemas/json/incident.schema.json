@@ -648,6 +648,20 @@
       "default": null,
       "title": "Confirmed"
     },
+    "resolved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Start of the first clean recovery window",
+      "title": "Resolved At"
+    },
     "baseline": {
       "title": "Baseline",
       "type": "number"

@@ -31,7 +31,9 @@ Candidates are all value combinations over up to three dimensions that actually 
 
 **Statistic.** For a cohort with observed failures `O` and expected `E`, the Poisson log-likelihood ratio `O ln(O/E) - O + E` (gauges: `(O - E)^2 / (2 sigma^2 n)`). `E` is first scaled by the excess elevation of the *rest* of the population, so a global regression does not make a random slice look special.
 
-**Selection.** Score `LLR - 2 (depth - 1)`: an extra dimension must pay for itself. Guards: at least 15 failures and a ratio of at least 1.5 (gauges 1.1). The best candidate must have a Bonferroni-adjusted p < 0.001 (`p = N_candidates * 0.5 * erfc(sqrt(LLR))`). The cohort is then removed ("explained away") and the scan repeats for up to three cohorts.
+**Selection.** Score `LLR - 2 (depth - 1)`: an extra dimension must pay for itself. Guards: at least 15 failures and a ratio of at least 1.5 (gauges 1.1). Rate expectations are estimates, so they are inflated by `expectation_margin` (25%) before the test; a cohort that is only marginally above a noisy expectation is not reported. The best candidate must have a Bonferroni-adjusted p < 0.001 (`p = N_candidates * 0.5 * erfc(sqrt(LLR))`). The cohort is then removed ("explained away") and the scan repeats for up to three cohorts.
+
+**Backfitting.** When two regressions overlap in cell space (say a driver and an app version that share some devices), greedy selection first picks the blend ("driver 7.14"). After the greedy pass each cohort is re-picked with the full membership of the others removed, which turns the blend into `x64 + Driver 7.14` and `ARM64 + App 2.1`. A second cohort that keeps at least 20% of the total excess and is not nested with the first becomes its own incident, and each incident's correlations ignore cells explained by the other.
 
 ## Correlation
 
@@ -40,6 +42,10 @@ For every recorded change: `temporal = exp(-max(onset - change_time, 0) / 60 min
 ## Why not plain thresholds?
 
 A threshold on the fleet-wide failure rate misses the flagship regression (0.38% to 0.67%) until it is far too late, and fires on traffic surges that change volume but not the rate. Working on rates with per-cell expectations, dispersion adjustment, persistence and cohort scans addresses both.
+
+## Recovery and later episodes
+
+An incident is **resolved** when its alarm cohort (or the whole fleet for a global incident) shows no significant excess (LLR < 2, i.e. z < 2) over a clean `recovery_minutes` (15) window. Its statistics are then measured from onset to the start of that window, so a hotfixed regression is not diluted by the healthy tail. If every incident in a pass is resolved, the engine starts a new pass on the data after `rebaseline_gap_minutes` (5) beyond the recovery, fits a fresh baseline there, and repeats (up to six passes). Incident replays (`timemachine`) are built on the window each incident was analysed in. Limits: a regression already present when a baseline starts is invisible to that baseline, and a pass only continues when every incident in it has recovered.
 
 ## Incident memory and recurrence
 

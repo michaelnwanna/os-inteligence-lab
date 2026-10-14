@@ -14,6 +14,8 @@ from ail_investigation import run_analysis
 from ail_schemas import TelemetryEvent, bucket_of
 from ail_simulator import Scenario, Simulator, iter_events, list_scenarios, simulate_to_store
 
+START_TOLERANCE = (-5, 40)  # minutes around the true effect start in which an onset counts as a match
+
 
 @dataclass
 class RunResult:
@@ -24,46 +26,44 @@ class RunResult:
     tp: int = 0
     fp: int = 0
     fn: int = 0
-    latency_min: float | None = None
-    cohort_ok: bool | None = None
-    trigger_rank: int | None = None
-    trigger_expected: bool = False
-    ai_valid: bool | None = None
-    culprit_top1: bool | None = None
-    notes: list[str] = field(default_factory=list)
+    latencies: list[float] = field(default_factory=list)
+    cohort_ok: list[bool] = field(default_factory=list)
+    trigger_rank: list[int | None] = field(default_factory=list)
+    ai_valid: list[bool] = field(default_factory=list)
+    culprit_top1: list[bool] = field(default_factory=list)
 
 
 def _run(sc: Scenario, seed: int, devices: int) -> RunResult:
     store = TelemetryStore(":memory:")
     simulate_to_store(sc, store, devices=devices, seed=seed)
     incidents = run_analysis(store, DetectionConfig(), save=False)
-    exp = sc.expected
-    res = RunResult(sc.id, seed, exp.incidents, len(incidents))
-    start = bucket_of(sc.start) + (exp.effect_start_minute or 0)
-    matched = None
-    for inc in incidents:
-        onset = bucket_of(inc.onset)
-        if exp.incidents and matched is None and start - 5 <= onset <= start + 40:
-            matched = inc
-        else:
-            res.fp += 1
-    if exp.incidents:
-        if matched is None:
-            res.fn = 1
-            return res
-        res.tp = 1
-        res.latency_min = float(bucket_of(matched.first_detection) - start)
-        got = matched.cohorts[0].dimensions if matched.cohorts else None
-        res.cohort_ok = (got == exp.cohort) if exp.cohort else got is None
-        if exp.trigger:
-            res.trigger_expected = True
-            ids = [c.change.deployment_id for c in matched.correlations]
-            res.trigger_rank = ids.index(exp.trigger) + 1 if exp.trigger in ids else None
-        inv = matched.investigation
-        if inv:
-            res.ai_valid = bool(inv.guardrail.get("provider_output_valid"))
-            if exp.culprit_commit:
-                res.culprit_top1 = bool(inv.candidate_commits and inv.candidate_commits[0].sha == exp.culprit_commit)
+    episodes = sc.expected.all_episodes()
+    res = RunResult(sc.id, seed, len(episodes), len(incidents))
+    unmatched = list(incidents)
+    for ep in episodes:
+        start = bucket_of(sc.start) + ep.effect_start_minute
+        in_window = [i for i in unmatched
+                     if start + START_TOLERANCE[0] <= bucket_of(i.onset) <= start + START_TOLERANCE[1]]
+        exact = [i for i in in_window if (i.cohorts[0].dimensions if i.cohorts else None) == ep.cohort]
+        candidates = exact or in_window  # prefer the incident whose cohort is the injected one
+        if not candidates:
+            res.fn += 1
+            continue
+        inc = min(candidates, key=lambda i: abs(bucket_of(i.onset) - start))
+        unmatched.remove(inc)
+        res.tp += 1
+        res.latencies.append(float(bucket_of(inc.first_detection) - start))
+        got = inc.cohorts[0].dimensions if inc.cohorts else None
+        res.cohort_ok.append((got == ep.cohort) if ep.cohort else got is None)
+        if ep.trigger:
+            ids = [c.change.deployment_id for c in inc.correlations]
+            res.trigger_rank.append(ids.index(ep.trigger) + 1 if ep.trigger in ids else None)
+        if inc.investigation:
+            res.ai_valid.append(bool(inc.investigation.guardrail.get("provider_output_valid")))
+            if ep.culprit_commit:
+                cands = inc.investigation.candidate_commits
+                res.culprit_top1.append(bool(cands and cands[0].sha == ep.culprit_commit))
+    res.fp = len(unmatched)
     return res
 
 
@@ -95,20 +95,21 @@ def evaluate(devices: int = 50_000, seeds: int = 3, progress=print) -> str:
     recall = tp / (tp + fn) if tp + fn else 1.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
     clean = [r for r in runs if r.expected == 0]
-    lat = [r.latency_min for r in runs if r.latency_min is not None]
-    cohort = [r.cohort_ok for r in runs if r.cohort_ok is not None]
-    trig = [r for r in runs if r.tp and r.trigger_expected]
-    top1 = sum(1 for r in trig if r.trigger_rank == 1)
-    top3 = sum(1 for r in trig if r.trigger_rank is not None and r.trigger_rank <= 3)
-    ai = [r.ai_valid for r in runs if r.ai_valid is not None]
-    culprit = [r.culprit_top1 for r in runs if r.culprit_top1 is not None]
+    lat = [x for r in runs for x in r.latencies]
+    cohort = [x for r in runs for x in r.cohort_ok]
+    ranks = [x for r in runs for x in r.trigger_rank]
+    top1 = sum(1 for x in ranks if x == 1)
+    top3 = sum(1 for x in ranks if x is not None and x <= 3)
+    ai = [x for r in runs for x in r.ai_valid]
+    culprit = [x for r in runs for x in r.culprit_top1]
     ingest = _ingestion_benchmark(next(s for s in scenarios if s.id == "scenario-003"))
+    episodes = sum(r.expected for r in runs)
 
     out = [
         "# Benchmark results",
         "",
-        f"Generated by `ail evaluate` ({len(scenarios)} scenarios x {seeds} seeds, {devices:,} simulated devices each). "
-        "Every run is reproducible from the scenario file and seed.",
+        f"Generated by `ail evaluate` ({len(scenarios)} scenarios x {seeds} seeds, {devices:,} simulated devices each, "
+        f"{episodes} injected regressions in total). Every run is reproducible from the scenario file and seed.",
         "",
         "## Detection",
         "| Metric | Result |", "|---|---|",
@@ -116,8 +117,8 @@ def evaluate(devices: int = 50_000, seeds: int = 3, progress=print) -> str:
         f"| Incident recall | {recall:.2f} |",
         f"| F1 | {f1:.2f} |",
         f"| False-positive rate (clean runs with any incident) | {_rate(sum(1 for r in clean if r.incidents), len(clean))} |",
-        f"| Detection latency from effect start (median / max, minutes) | "
-        f"{statistics.median(lat):.0f} / {max(lat):.0f} |" if lat else "| Detection latency | n/a |",
+        f"| Detection latency from effect start (median / max, minutes) | {statistics.median(lat):.0f} / {max(lat):.0f} |"
+        if lat else "| Detection latency | n/a |",
         "",
         "## Cohort intelligence",
         "| Metric | Result |", "|---|---|",
@@ -125,8 +126,8 @@ def evaluate(devices: int = 50_000, seeds: int = 3, progress=print) -> str:
         "",
         "## Correlation",
         "| Metric | Result |", "|---|---|",
-        f"| True change ranked top-1 | {_rate(top1, len(trig))} |",
-        f"| True change ranked top-3 | {_rate(top3, len(trig))} |",
+        f"| True change ranked top-1 | {_rate(top1, len(ranks))} |",
+        f"| True change ranked top-3 | {_rate(top3, len(ranks))} |",
         "",
         "## AI investigation (default offline `rules` provider)",
         "| Metric | Result |", "|---|---|",
@@ -140,13 +141,13 @@ def evaluate(devices: int = 50_000, seeds: int = 3, progress=print) -> str:
         f"| Python / platform | {platform.python_version()} / {platform.platform()} |",
         "",
         "## Per-run detail",
-        "| Scenario | Seed | Expected | Incidents | Latency (min) | Cohort correct | Trigger rank |",
-        "|---|---|---|---|---|---|---|",
+        "| Scenario | Seed | Expected | Incidents | Matched | Latency (min) | Cohort correct | Trigger rank |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for r in runs:
-        out.append(f"| {r.scenario} | {r.seed} | {r.expected} | {r.incidents} | "
-                   f"{'' if r.latency_min is None else int(r.latency_min)} | "
-                   f"{'' if r.cohort_ok is None else r.cohort_ok} | {'' if r.trigger_rank is None else r.trigger_rank} |")
+        out.append(f"| {r.scenario} | {r.seed} | {r.expected} | {r.incidents} | {r.tp} | "
+                   f"{', '.join(str(int(x)) for x in r.latencies)} | {', '.join(str(x) for x in r.cohort_ok)} | "
+                   f"{', '.join('-' if x is None else str(x) for x in r.trigger_rank)} |")
     out += ["", "Targets from the product spec (1,000 events/s locally, 100K simulated devices, 10M stored events) "
                 "are engineering targets; only the numbers above are measured."]
     return "\n".join(out) + "\n"

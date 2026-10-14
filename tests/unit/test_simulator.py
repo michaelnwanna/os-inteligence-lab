@@ -9,7 +9,7 @@ from ail_simulator import Simulator, iter_events, list_scenarios, load_scenario,
 
 def test_all_scenarios_load_and_cover_the_spec():
     ids = [s.id for s in list_scenarios()]
-    assert ids == [f"scenario-00{n}" for n in range(1, 9)]
+    assert ids == [f"scenario-{n:03d}" for n in range(1, 11)]
 
 
 def test_same_seed_reproduces_identical_data_and_other_seed_differs():

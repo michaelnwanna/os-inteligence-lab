@@ -1,0 +1,54 @@
+id: scenario-010
+name: Simultaneous unrelated regressions
+description: >
+  Two independent defects appear within minutes of each other: Atlas 2.1 on ARM64 and driver 7.14
+  on x64. Both raise the failure rate, so a single fleet-wide anomaly hides two separate causes.
+  Each should become its own incident with its own trigger.
+seed: 10
+duration_minutes: 180
+population:
+  devices: 100000
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 15
+    max_exposure: 0.3
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 105
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-arm64-memory
+    where: {architecture: arm64, application_version: "2.1"}
+    failure_rate: 0.087
+    memory_multiplier: 2.4
+    signature: "OOM_KILL|MemoryCache.Allocate"
+  - id: fx-driver-x64
+    where: {architecture: x64, driver_version: "7.14"}
+    failure_rate: 0.06
+    signature: "ACCESS_VIOLATION|Gfx.Driver.Present"
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {architecture: arm64, application_version: "2.1"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 105
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate

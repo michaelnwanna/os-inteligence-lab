@@ -21,8 +21,8 @@ from ail_investigation.history import IncidentArchive
 from ail_investigation.report import render_markdown
 from ail_schemas import DIMENSIONS, Incident, iso
 from ail_simulator import repo_root
-from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 
@@ -68,7 +68,8 @@ class AppState:
 
 
 def create_app(db_path: str | Path = "data/ail.db", inline: bool = False,
-               archive_path: str | Path | None = None) -> FastAPI:
+               archive_path: str | Path | None = None, read_token: str | None = None) -> FastAPI:
+    read_token = read_token or os.environ.get("AIL_READ_TOKEN") or None
     store = TelemetryStore(db_path)
     archive = IncidentArchive(archive_path or os.environ.get("AIL_ARCHIVE", "data/archive.db"))
     ctx = IngestionContext(store=store, inline=inline)
@@ -85,6 +86,15 @@ def create_app(db_path: str | Path = "data/ail.db", inline: bool = False,
     app.state.ctx, app.state.store = ctx, store
     app.include_router(build_ingestion_router(ctx))
     add_health_routes(app, ctx)
+
+    @app.middleware("http")
+    async def read_guard(request: Request, call_next):
+        guarded = request.url.path.startswith("/api/v1/") or request.url.path == "/metrics"
+        if read_token and request.method == "GET" and guarded:
+            supplied = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+            if not hmac.compare_digest(supplied.encode(), read_token.encode()):
+                return JSONResponse({"detail": "missing or invalid read token"}, status_code=401)
+        return await call_next(request)
 
     @app.get("/api/v1/meta")
     def meta() -> dict[str, Any]:

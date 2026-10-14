@@ -98,6 +98,9 @@ def build_timemachine(ws: Workspace, inc: Incident) -> tuple[list[TimelineEvent]
     if inv:
         add(anchor + stage * steps, "ai_completed", "AI investigation completed",
             inv.hypotheses[0].title if inv.hypotheses else "", True, provider=inv.provider)
+    if inc.resolved_at:
+        add(inc.resolved_at, "recovered", f"{metric_label(inc.metric)} recovered",
+            f"No significant excess for {cfg.recovery_minutes} minutes in {cohort_label(dims)}")
     events.sort(key=lambda e: e.ts)
 
     last_ts = dt_of(ws.t0 + cube.T - 1)

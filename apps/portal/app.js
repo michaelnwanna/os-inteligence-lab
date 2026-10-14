@@ -16,7 +16,8 @@ const el = (tag, props = {}, ...kids) => {
   return n;
 };
 const api = async (path) => {
-  const r = await fetch(path);
+  const token = sessionStorage.getItem("ail_token");
+  const r = await fetch(path, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
   if (!r.ok) throw new Error(`${r.status}: ${(await r.json().catch(() => ({}))).detail || r.statusText}`);
   return r.json();
 };
@@ -162,7 +163,7 @@ async function renderIncident(id) {
       kpi(top && !top.after_onset ? Math.round(top.score * 100) + "%" : "-", top && !top.after_onset ? `Correlation: ${top.change.component} ${top.change.to_version || ""}` : "Correlation")),
     el("div", { class: "filters", style: "margin-top:12px" },
       el("a", { href: `#/timemachine/${encodeURIComponent(inc.id)}` }, el("button", { class: "primary" }, "Open Failure Time Machine")),
-      el("a", { href: `/api/v1/incidents/${encodeURIComponent(inc.id)}/report`, target: "_blank", rel: "noopener" }, el("button", {}, "Markdown report"))));
+      el("button", { onclick: () => openReport(inc.id) }, "Markdown report")));
 
   if (inv) {
     const factEls = {}, hypEls = {};
@@ -247,6 +248,20 @@ async function renderTimeMachine(id) {
 }
 
 /* ---------- Router ---------- */
+function renderLogin() {
+  const input = el("input", { type: "password", autocomplete: "off", "aria-label": "Read token", style: "min-width:280px" });
+  const save = () => { sessionStorage.setItem("ail_token", input.value); route(); };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+  page("Authentication required", "This server protects its read API. The token is kept for this browser tab only.");
+  show(el("div", { class: "card filters" }, input, el("button", { class: "primary", onclick: save }, "Continue")));
+}
+
+async function openReport(id) {
+  const token = sessionStorage.getItem("ail_token");
+  const r = await fetch(`/api/v1/incidents/${encodeURIComponent(id)}/report`, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+  if (r.ok) window.open(URL.createObjectURL(await r.blob()), "_blank", "noopener");
+}
+
 async function route() {
   clearInterval(tmTimer); tmTimer = null;
   const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
@@ -259,6 +274,7 @@ async function route() {
     else if (parts[0] === "timemachine") await renderTimeMachine(parts[1]);
     else app.replaceChildren(el("h1", {}, "Not found"));
   } catch (err) {
+    if (String(err.message).startsWith("401")) return renderLogin();
     app.replaceChildren(el("h1", {}, "Something went wrong"), el("div", { class: "card err" }, String(err.message || err)), el("p", { class: "muted" }, "If no data has been loaded yet, run `ail demo` first."));
   }
 }

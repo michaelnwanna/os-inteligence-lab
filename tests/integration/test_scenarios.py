@@ -10,25 +10,27 @@ from conftest import scenario_ids
 @pytest.mark.parametrize("scenario_id", scenario_ids())
 def test_scenario_outcome_matches_ground_truth(scenario_run, scenario_id):
     run = scenario_run(scenario_id)
-    exp = run.scenario.expected
-    assert len(run.incidents) == exp.incidents, [i.title for i in run.incidents]
-    if not exp.incidents:
-        return
-    inc = run.incidents[0]
-    start = bucket_of(run.scenario.start) + exp.effect_start_minute
+    episodes = run.scenario.expected.all_episodes()
+    assert len(run.incidents) == len(episodes), [i.title for i in run.incidents]
 
-    # detection: onset estimate near the true start, detected soon after
-    assert abs(bucket_of(inc.onset) - start) <= 10
-    assert 0 <= bucket_of(inc.first_detection) - start <= 15
-    assert inc.metric == exp.metric
+    remaining = list(run.incidents)
+    for ep in episodes:
+        start = bucket_of(run.scenario.start) + ep.effect_start_minute
+        inc = min(remaining, key=lambda i: abs(bucket_of(i.onset) - start))
+        remaining.remove(inc)
 
-    # cohort intelligence: the cohort is found without being told its dimensions
-    found = inc.cohorts[0].dimensions if inc.cohorts else None
-    assert found == exp.cohort
+        # detection: onset estimate near the true start, detected soon after
+        assert abs(bucket_of(inc.onset) - start) <= 10, inc.title
+        assert 0 <= bucket_of(inc.first_detection) - start <= 15, inc.title
+        assert inc.metric == ep.metric
 
-    # correlation: the true change ranks first
-    assert inc.correlations[0].change.deployment_id == exp.trigger
-    assert not inc.correlations[0].after_onset
+        # cohort intelligence: the cohort is found without being told its dimensions
+        found = inc.cohorts[0].dimensions if inc.cohorts else None
+        assert found == ep.cohort
+
+        # correlation: the true change ranks first
+        assert inc.correlations[0].change.deployment_id == ep.trigger
+        assert not inc.correlations[0].after_onset
 
 
 def test_flagship_matches_the_spec_narrative(flagship):
@@ -57,6 +59,28 @@ def test_later_unrelated_change_is_not_a_trigger(flagship):
     assert late.after_onset and late.temporal_score == 0.0 and late.score < 0.1
     early = next(c for c in inc.correlations if c.change.deployment_id == "drv-7.14")
     assert early.score < inc.correlations[0].score - 0.4
+
+
+def test_hotfix_resolves_the_first_incident_and_a_later_one_is_still_found(scenario_run):
+    run = scenario_run("scenario-009")
+    first, second = run.incidents
+    hotfix = bucket_of(run.scenario.start) + 185
+    fix = bucket_of(first.resolved_at)
+    assert first.status == "resolved" and abs(fix - hotfix) <= 15
+    assert first.observed > 0.04  # measured over the incident, not diluted by the recovered tail
+    assert second.status != "resolved"
+    assert second.cohorts[0].dimensions == {"architecture": "x64", "driver_version": "7.14"}
+    assert bucket_of(second.onset) > fix + 60  # found on a re-baselined window after the recovery
+    assert any(e.kind == "recovered" for e in first.timeline) if first.timeline else True
+
+
+def test_simultaneous_regressions_become_separate_incidents_with_separate_triggers(scenario_run):
+    incidents = scenario_run("scenario-010").incidents
+    by_trigger = {i.correlations[0].change.deployment_id: i for i in incidents}
+    assert set(by_trigger) == {"dep-app-2.1", "drv-7.14"}
+    assert by_trigger["dep-app-2.1"].cohorts[0].dimensions == {"architecture": "arm64", "application_version": "2.1"}
+    assert by_trigger["drv-7.14"].cohorts[0].dimensions == {"architecture": "x64", "driver_version": "7.14"}
+    assert all(i.correlations[0].score > 0.9 for i in incidents)
 
 
 def test_analysis_is_reproducible(flagship):

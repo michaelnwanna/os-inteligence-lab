@@ -66,4 +66,4 @@ Prioritised next steps are in the [README](../README.md#recommended-next-steps).
 
 ## 7. Test strategy
 
-The simulator is the test foundation. Scenarios 001 to 008 (no regression, global crash, ARM64-only, driver-specific, performance degradation, deployment-correlated, false-positive trap, gradual degradation) each declare an expected outcome; see [scenarios](scenarios/README.md). Tracked metrics: precision, recall, F1, detection latency, false-positive rate, cohort accuracy, correlation ranking accuracy, agent grounding and ingestion throughput.
+The simulator is the test foundation. Scenarios 001 to 010 (no regression, global crash, ARM64-only, driver-specific, performance degradation, deployment-correlated, false-positive trap, gradual degradation, hotfix then new regression, simultaneous regressions) each declare an expected outcome; see [scenarios](scenarios/README.md). Tracked metrics: precision, recall, F1, detection latency, false-positive rate, cohort accuracy, correlation ranking accuracy, agent grounding and ingestion throughput.

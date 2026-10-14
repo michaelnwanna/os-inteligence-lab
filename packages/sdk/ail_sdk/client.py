@@ -29,8 +29,9 @@ class IngestionClient:
         for attempt in range(self.max_retries + 1):
             try:
                 resp = self._http.post(path, json=body)
-                if resp.status_code == 503 and attempt < self.max_retries:
-                    time.sleep(delay)
+                if resp.status_code in (429, 503) and attempt < self.max_retries:
+                    retry_after = resp.headers.get("Retry-After", "")
+                    time.sleep(min(float(retry_after), 30.0) if retry_after.replace(".", "", 1).isdigit() else delay)
                     delay *= 2
                     continue
                 resp.raise_for_status()

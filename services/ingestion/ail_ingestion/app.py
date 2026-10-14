@@ -16,6 +16,7 @@ from fastapi import APIRouter, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import ValidationError
 
+from ail_ingestion.ratelimit import RateLimiter
 from ail_ingestion.store import TelemetryStore
 from ail_ingestion.stream import Backpressure, InMemoryStream, Pipeline, StreamProcessor
 
@@ -28,6 +29,8 @@ class IngestionContext:
     stream: InMemoryStream = field(default_factory=InMemoryStream)
     token: str | None = field(default_factory=lambda: os.environ.get("AIL_API_TOKEN") or None)
     inline: bool = False  # process synchronously (tests); otherwise a worker thread drains the stream
+    limiter: RateLimiter | None = field(
+        default_factory=lambda: RateLimiter(float(os.environ["AIL_RATE_LIMIT"])) if os.environ.get("AIL_RATE_LIMIT") else None)
 
     def __post_init__(self) -> None:
         self.processor = StreamProcessor(self.stream, Pipeline(self.store))
@@ -59,6 +62,16 @@ async def _read_json(request: Request) -> Any:
 
 def build_ingestion_router(ctx: IngestionContext) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["ingestion"])
+
+    def throttle(request: Request) -> JSONResponse | None:
+        if ctx.limiter is None:
+            return None
+        ok, wait = ctx.limiter.allow(request.client.host if request.client else "unknown")
+        if ok:
+            return None
+        REGISTRY.inc("ail_ingest_throttled_total")
+        return JSONResponse({"error": "rate limit exceeded"}, status_code=429,
+                            headers={"Retry-After": str(max(1, int(wait + 0.999)))})
 
     def authorize(authorization: str | None) -> None:
         if ctx.token is None:
@@ -94,16 +107,22 @@ def build_ingestion_router(ctx: IngestionContext) -> APIRouter:
     @router.post("/events")
     async def post_events(request: Request, authorization: str | None = Header(default=None)):
         authorize(authorization)
+        if (limited := throttle(request)) is not None:
+            return limited
         return accept(_items(await _read_json(request), "events"), None)
 
     @router.post("/metrics")
     async def post_metrics(request: Request, authorization: str | None = Header(default=None)):
         authorize(authorization)
+        if (limited := throttle(request)) is not None:
+            return limited
         return accept(_items(await _read_json(request), "metrics"), "metric")
 
     @router.post("/deployments")
     async def post_deployments(request: Request, authorization: str | None = Header(default=None)):
         authorize(authorization)
+        if (limited := throttle(request)) is not None:
+            return limited
         accepted, rejected = 0, []
         for i, raw in enumerate(_items(await _read_json(request), "deployments")):
             try:

@@ -116,6 +116,7 @@ class Incident(BaseModel):
     onset: datetime
     first_detection: datetime
     confirmed: datetime | None = None
+    resolved_at: datetime | None = Field(default=None, description="Start of the first clean recovery window")
     baseline: float
     observed: float
     global_baseline: float

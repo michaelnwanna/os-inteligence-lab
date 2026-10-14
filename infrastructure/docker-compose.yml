@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     environment:
       AIL_API_TOKEN: ${AIL_API_TOKEN:-}
+      AIL_READ_TOKEN: ${AIL_READ_TOKEN:-}
+      AIL_RATE_LIMIT: ${AIL_RATE_LIMIT:-}
       AIL_LLM_PROVIDER: ${AIL_LLM_PROVIDER:-rules}
       AIL_LLM_API_KEY: ${AIL_LLM_API_KEY:-}
       AIL_LLM_MODEL: ${AIL_LLM_MODEL:-}

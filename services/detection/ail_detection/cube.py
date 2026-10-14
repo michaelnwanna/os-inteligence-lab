@@ -90,6 +90,8 @@ class Cube:
             bi.append(b)
             ci.append(c)
             vals.append(r[1 + d :])
+        if not vals:
+            raise ValueError(f"no data for metric '{metric}' in the requested window")
         C = len(cell_ids)
         arr = np.array(vals, dtype=float)
         shape = (T, C)

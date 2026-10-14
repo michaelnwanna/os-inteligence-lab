@@ -12,7 +12,7 @@ from ail_detection.cube import Cube
 class Workspace:
     """Builds cubes and cohort scanners on demand. Create a new Workspace when the data changes."""
 
-    def __init__(self, store, cfg: DetectionConfig | None = None):
+    def __init__(self, store, cfg: DetectionConfig | None = None, start: int | None = None):
         self.store = store
         self.cfg = cfg or DetectionConfig()
         self._cubes: dict[str, Cube] = {}
@@ -22,6 +22,8 @@ class Workspace:
         if rng is None:
             raise ValueError("the store contains no telemetry")
         self.t0, self.t1 = rng
+        if start is not None:
+            self.t0 = max(self.t0, start)
         self.metrics = [m for m in store.metrics() if not m.startswith("sig:")]
         self.signature_metrics = [m for m in store.metrics() if m.startswith("sig:")]
 

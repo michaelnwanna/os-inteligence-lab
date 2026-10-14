@@ -1,0 +1,58 @@
+id: scenario-009
+name: Hotfix then a new regression
+description: >
+  Atlas 2.1 regresses ARM64 devices, a hotfix at 15:05 restores them, and hours later driver 7.14
+  breaks x64 devices. The platform must report the first incident as resolved, re-baseline, and
+  still find the second, unrelated episode.
+seed: 9
+duration_minutes: 420
+population:
+  devices: 100000
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 20
+    max_exposure: 0.3
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 270
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-arm64-memory
+    where: {architecture: arm64, application_version: "2.1"}
+    start_minute: 100
+    end_minute: 185
+    failure_rate: 0.087
+    memory_multiplier: 2.4
+    signature: "OOM_KILL|MemoryCache.Allocate"
+    description: Memory defect in Atlas 2.1 on ARM64, fixed by a hotfix
+  - id: fx-driver-x64
+    where: {architecture: x64, driver_version: "7.14"}
+    start_minute: 270
+    failure_rate: 0.06
+    signature: "ACCESS_VIOLATION|Gfx.Driver.Present"
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {architecture: arm64, application_version: "2.1"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 270
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate

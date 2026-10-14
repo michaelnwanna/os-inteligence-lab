@@ -96,6 +96,16 @@ class Traffic(BaseModel):
     multiplier: float
 
 
+class Episode(BaseModel):
+    """One injected regression the platform is expected to find."""
+
+    effect_start_minute: int
+    cohort: dict[str, str] | None = None
+    trigger: str | None = None
+    metric: str | None = None
+    culprit_commit: str | None = None
+
+
 class Expected(BaseModel):
     incidents: int = 0
     effect_start_minute: int | None = None
@@ -103,6 +113,15 @@ class Expected(BaseModel):
     trigger: str | None = None
     metric: str | None = None
     culprit_commit: str | None = None
+    episodes: list[Episode] = []  # use instead of the single-incident fields when there are several
+
+    def all_episodes(self) -> list[Episode]:
+        if self.episodes:
+            return self.episodes
+        if self.incidents and self.effect_start_minute is not None:
+            return [Episode(effect_start_minute=self.effect_start_minute, cohort=self.cohort, trigger=self.trigger,
+                            metric=self.metric, culprit_commit=self.culprit_commit)]
+        return []
 
 
 class Scenario(BaseModel):

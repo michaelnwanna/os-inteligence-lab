@@ -20,12 +20,15 @@ def correlate(
     end_idx: int,
     changes: list[ChangeEvent],
     cfg: CorrelationConfig,
+    ignore: np.ndarray | None = None,
 ) -> list[CorrelationCandidate]:
     """Score every change by temporal proximity to the onset and by how much of the anomaly's
     excess lies in the population the change touched."""
     nw, kw, sw, _ = cube.window(onset_idx, end_idx + 1)
     observed = kw if cube.kind == "rate" else sw
     excess = observed - nw * scanner.level
+    if ignore is not None:  # cells whose excess belongs to a different incident
+        excess = np.where(ignore, 0.0, excess)
     in_cohort = cohort_mask if cohort_mask is not None else np.ones(cube.C, dtype=bool)
     onset_bucket = cube.t0 + onset_idx
 
