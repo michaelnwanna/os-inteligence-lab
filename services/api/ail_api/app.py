@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import os
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -12,9 +13,11 @@ from typing import Any
 from ail_detection import DetectionConfig, Workspace
 from ail_detection.explore import breakdown, health, series_payload
 from ail_detection.labels import cohort_label
+from ail_detection.nlq import answer, parse, vocab_of
 from ail_ingestion.app import IngestionContext, add_health_routes, build_ingestion_router
 from ail_ingestion.store import TelemetryStore
 from ail_investigation import create_provider, run_analysis
+from ail_investigation.history import IncidentArchive
 from ail_investigation.report import render_markdown
 from ail_schemas import DIMENSIONS, Incident, iso
 from ail_simulator import repo_root
@@ -64,8 +67,10 @@ class AppState:
             return self._ws
 
 
-def create_app(db_path: str | Path = "data/ail.db", inline: bool = False) -> FastAPI:
+def create_app(db_path: str | Path = "data/ail.db", inline: bool = False,
+               archive_path: str | Path | None = None) -> FastAPI:
     store = TelemetryStore(db_path)
+    archive = IncidentArchive(archive_path or os.environ.get("AIL_ARCHIVE", "data/archive.db"))
     ctx = IngestionContext(store=store, inline=inline)
     state = AppState(store)
 
@@ -170,6 +175,11 @@ def create_app(db_path: str | Path = "data/ail.db", inline: bool = False) -> Fas
             raise HTTPException(404, f"unknown metric '{metric}'")
         return breakdown(ws, metric, _parse_filters(filters), window)
 
+    @app.get("/api/v1/query")
+    def query(q: str = Query(min_length=3, max_length=300)) -> dict[str, Any]:
+        ws = state.ws()
+        return answer(ws, parse(q, vocab_of(ws)), store.list_incidents())
+
     @app.get("/api/v1/changes")
     def changes() -> list[dict[str, Any]]:
         return [c.model_dump(mode="json") for c in store.list_changes()]
@@ -181,7 +191,7 @@ def create_app(db_path: str | Path = "data/ail.db", inline: bool = False) -> Fas
             if not hmac.compare_digest(supplied.encode(), ctx.token.encode()):
                 raise HTTPException(401, "missing or invalid API token")
         ctx.processor.drain()
-        found = run_analysis(store, DetectionConfig(), create_provider())
+        found = run_analysis(store, DetectionConfig(), create_provider(), archive=archive)
         return {"incidents": [i.id for i in found]}
 
     portal = repo_root() / "apps" / "portal"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -11,11 +12,16 @@ import httpx
 from ail_detection import DetectionConfig
 from ail_ingestion.store import TelemetryStore
 from ail_investigation import create_provider, run_analysis
+from ail_investigation.history import IncidentArchive
 from ail_investigation.report import render_issue, render_markdown
 from ail_simulator import Simulator, iter_events, list_scenarios, load_scenario, simulate_to_store
 
 DEFAULT_DB = "data/ail.db"
 FLAGSHIP = "scenario-003"
+
+
+def _archive() -> IncidentArchive:
+    return IncidentArchive(os.environ.get("AIL_ARCHIVE", "data/archive.db"))
 
 
 def _fresh_store(path: str, force: bool) -> TelemetryStore:
@@ -66,7 +72,8 @@ def cmd_simulate(a: argparse.Namespace) -> None:
 def cmd_analyze(a: argparse.Namespace) -> None:
     store = TelemetryStore(a.db)
     start = time.perf_counter()
-    incidents = run_analysis(store, DetectionConfig(), create_provider(a.llm), a.repo_mode, not a.no_investigate)
+    incidents = run_analysis(store, DetectionConfig(), create_provider(a.llm), a.repo_mode, not a.no_investigate,
+                             archive=_archive())
     print(f"Analysis finished in {time.perf_counter() - start:.1f}s")
     _print_summary(incidents)
 
@@ -86,7 +93,7 @@ def cmd_demo(a: argparse.Namespace) -> None:
     print(f"1/3 Simulating {n:,} devices for '{sc.name}'")
     simulate_to_store(sc, store, devices=a.devices, progress=_progress)
     print("2/3 Detecting anomalies, isolating cohorts, correlating changes, investigating")
-    incidents = run_analysis(store, DetectionConfig(), create_provider(a.llm), "auto")
+    incidents = run_analysis(store, DetectionConfig(), create_provider(a.llm), "auto", archive=_archive())
     _print_summary(incidents)
     print("\n3/3 Failure Time Machine and reports are ready.")
     store.close()
@@ -134,6 +141,70 @@ def cmd_stream(a: argparse.Namespace) -> None:
 def cmd_scenarios(_: argparse.Namespace) -> None:
     for sc in list_scenarios():
         print(f"{sc.id}  {sc.name}  (expected incidents: {sc.expected.incidents})")
+
+
+def cmd_ask(a: argparse.Namespace) -> None:
+    from ail_detection import Workspace
+    from ail_detection.nlq import answer, parse, vocab_of
+
+    store = TelemetryStore(a.db)
+    ws = Workspace(store, DetectionConfig())
+    res = answer(ws, parse(" ".join(a.question), vocab_of(ws)), store.list_incidents())
+    q = res["query"]
+    print(f"Understood: metric={q['metric']} include={q['include']} exclude={q['exclude']} "
+          f"window={res['window'][0]}-{res['window'][1]} UTC")
+    for note in q["notes"]:
+        print(f"  note: {note}")
+    print(res["answer"])
+    for i in res["incidents"]:
+        print(f"  {i['id']}  {i['title']} [{i['severity']}]")
+
+
+def cmd_history(_: argparse.Namespace) -> None:
+    past = _archive().all()
+    if not past:
+        print("The archive is empty. Run `ail analyze` or `ail demo` first.")
+    for inc in past:
+        print(f"{inc.id}  {inc.title}  [{inc.severity}]  onset {inc.onset:%Y-%m-%d %H:%M}  data {inc.reproducibility.get('data_fingerprint')}")
+
+
+def cmd_agent(a: argparse.Namespace) -> None:
+    import json
+
+    from ail_agent import SIGNALS, build_payload, grant, load_consent, revoke
+    from ail_agent.agent import run_loop
+    from ail_agent.consent import config_dir
+
+    if a.action == "signals":
+        for name, text in SIGNALS.items():
+            print(f"{name}: {text}")
+        return
+    if a.action == "revoke":
+        print("consent revoked and local device id deleted" if revoke() else "nothing to revoke")
+        return
+    if a.action == "enroll":
+        chosen = a.signals or list(SIGNALS)
+        print("The agent will send ONLY these signals, to " + a.endpoint + ":")
+        for name in chosen:
+            print(f"  - {name}: {SIGNALS.get(name, '?')}")
+        print("Plus coarse machine facts: OS, OS version, architecture, CPU core count, memory size.")
+        print(f"It never collects names, hostnames, files, processes, network data or location. Consent is stored in {config_dir()}.")
+        if not a.yes and input("Enable these signals? [y/N] ").strip().lower() != "y":
+            sys.exit("not enrolled")
+        grant(chosen, a.endpoint)
+        print("enrolled. Run `ail agent preview` to see exactly what would be sent.")
+        return
+    consent = load_consent()
+    if consent is None:
+        sys.exit("not enrolled: run `ail agent enroll` first (the agent never runs without explicit consent)")
+    if a.action == "preview":
+        print(json.dumps(build_payload(consent), indent=2))
+        return
+    token = os.environ.get("AIL_API_TOKEN")
+    try:
+        run_loop(consent, a.interval, 1 if a.once else a.count, token)
+    except httpx.TransportError:
+        sys.exit(f"cannot reach {consent.endpoint}")
 
 
 def cmd_evaluate(a: argparse.Namespace) -> None:
@@ -199,6 +270,24 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--url", default="http://127.0.0.1:8000")
     s.add_argument("--token")
     s.set_defaults(fn=cmd_stream)
+
+    s = sub.add_parser("agent", help="opt-in local telemetry agent (enroll, preview, run, revoke)")
+    s.add_argument("action", choices=["signals", "enroll", "preview", "run", "revoke"])
+    s.add_argument("--signals", nargs="+")
+    s.add_argument("--endpoint", default="http://127.0.0.1:8000")
+    s.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
+    s.add_argument("--once", action="store_true")
+    s.add_argument("--count", type=int)
+    s.add_argument("--interval", type=float, default=60.0)
+    s.set_defaults(fn=cmd_agent)
+
+    s = sub.add_parser("ask", help="ask a plain-English question about the telemetry")
+    s.add_argument("question", nargs="+")
+    s.add_argument("--db", default=DEFAULT_DB)
+    s.set_defaults(fn=cmd_ask)
+
+    s = sub.add_parser("history", help="list incidents remembered from earlier analyses")
+    s.set_defaults(fn=cmd_history)
 
     s = sub.add_parser("scenarios", help="list built-in scenarios")
     s.set_defaults(fn=cmd_scenarios)

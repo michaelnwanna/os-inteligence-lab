@@ -25,7 +25,7 @@ Scope: the ingestion API, stores, detection/investigation services, portal, LLM 
 | Config and secrets | Secrets committed | Secrets only via environment; `.gitignore` excludes `.env*` and databases; `.env.example` has no values | No secret scanning in CI yet. |
 | Storage | Tampering with the database file | File permissions only | No encryption at rest or signing. |
 | Supply chain | Malicious dependency | Small dependency set (numpy, pydantic, fastapi, uvicorn, httpx, pyyaml); no front-end build chain | Add dependency pinning and `pip-audit` to CI for production use. |
-| Real-device collection (future, Phase 8) | Covert or excessive collection | Requirement: opt-in, transparent, documented signal list, payload preview | Not implemented. |
+| Real-device collection | Covert or excessive collection | The agent refuses to run without a consent file; `enroll` lists every signal and prompts; `preview` prints the exact payload; `revoke` deletes consent and the device id; signals are a fixed allowlist; the device id is random and local; no hostname, user, process, file, network or location data is read | The consent file is user-writable, so a local attacker could change it; the agent trusts the local user. Agent code has not had an external review. |
 
 ## Privacy design rules
 - Schema contains no direct identifiers; `device_id` must be a random or salted identifier chosen by the sender.

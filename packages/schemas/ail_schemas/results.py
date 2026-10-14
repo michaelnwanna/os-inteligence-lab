@@ -125,6 +125,7 @@ class Incident(BaseModel):
     cohorts: list[CohortFinding] = Field(default_factory=list)
     signatures: list[dict[str, Any]] = Field(default_factory=list)
     correlations: list[CorrelationCandidate] = Field(default_factory=list)
+    similar_incidents: list[dict[str, Any]] = Field(default_factory=list)
     investigation: Investigation | None = None
     timeline: list[TimelineEvent] = Field(default_factory=list)
     timemachine: dict[str, Any] | None = None

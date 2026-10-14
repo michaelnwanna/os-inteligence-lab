@@ -94,6 +94,14 @@ def build_evidence(
                 f"{c.overlap * 100:.0f}% overlap with the affected population; correlation score {c.score:.2f}. "
                 "Correlation is evidence of association, not proof of causation.", data)
 
+    for s in inc.similar_incidents[:2]:
+        add("H", "history",
+            f"A similar earlier incident {s['id']} ({s['title']}, onset {s['onset'][:10]} {s['onset'][11:16]} UTC) "
+            f"was recorded; similarity {s['score']:.2f} across "
+            f"metric, cohort, failure signature and trigger type."
+            f"{' This may be a recurrence.' if s['recurring'] else ''}",
+            {"id": s["id"], "score": s["score"], "recurring": s["recurring"], "onset": s["onset"]})
+
     for c in candidates[:3]:
         where = f" in {repo_name} {ref_range[0]}..{ref_range[1]}" if repo_name and ref_range else ""
         add("C", "code",

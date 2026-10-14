@@ -13,7 +13,7 @@ def client(tmp_path_factory):
     store = TelemetryStore(db)
     simulate_to_store(load_scenario("scenario-003"), store, devices=20_000)
     store.close()
-    app = create_app(db, inline=True)
+    app = create_app(db, inline=True, archive_path=":memory:")
     with TestClient(app) as c:
         assert c.post("/api/v1/analyze").json()["incidents"] == ["AIL-1001"]
         yield c
@@ -49,6 +49,13 @@ def test_anomaly_filters(client):
     assert 0 < len(only) < len(everything)
     assert all(r["detector"] == "CohortScanDetector" for r in only)
     assert client.get("/api/v1/anomalies", params={"architecture": "x86"}).json() == []
+
+
+def test_natural_language_query_endpoint(client):
+    r = client.get("/api/v1/query", params={"q": "regressions in the last 7 days affecting ARM64 but not x64"}).json()
+    assert r["verdict"] == "regression" and r["query"]["include"] == {"architecture": "arm64"}
+    assert r["incidents"][0]["id"] == "AIL-1001"
+    assert client.get("/api/v1/query", params={"q": "x"}).status_code == 422
 
 
 def test_cohort_drilldown_and_series(client):

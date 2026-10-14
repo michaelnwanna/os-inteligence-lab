@@ -107,6 +107,19 @@ class RulesProvider:
                 "confidence": "low",
                 "supporting_evidence": base_refs,
             })
+        history = by_kind.get("history", [])
+        if history and history[0]["data"]["recurring"]:
+            h = history[0]
+            hyps.append({
+                "title": f"This may be a recurrence of earlier incident {h['data']['id']} "
+                         f"(onset {h['data']['onset'][:10]} {h['data']['onset'][11:16]} UTC)",
+                "rationale": "The metric, cohort, failure signature and trigger type closely match an incident "
+                             "recorded earlier, so its investigation notes are a useful starting point.",
+                "confidence": "medium" if hyps else "low",
+                "supporting_evidence": base_refs + [h["id"]],
+            })
+            steps.append({"step": f"Review how earlier incident {h['data']['id']} was diagnosed and resolved.",
+                          "evidence": [h["id"]]})
         if not hyps:
             hyps.append({"title": "The cause cannot be determined from the available evidence",
                          "rationale": "No change correlates strongly with the onset and no code candidate was found.",

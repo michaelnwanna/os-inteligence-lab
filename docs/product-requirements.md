@@ -59,8 +59,8 @@ Reliability engineer, developer checking a deployment, data/ML engineer experime
 | 5 | Evidence-grounded report without invented telemetry facts | `tests/integration/test_investigation.py` |
 | 6 | Deliberately introduced commit identified among several | `ail evaluate`: injected commit ranked first |
 | 7 | Complete incident replayed from deployment through investigation | portal `#/timemachine`, `test_incident_endpoints` |
-| 8 | Two operating systems send privacy-safe telemetry into the same schema | Not started |
-| 9 | Recurring-regression detection, clustering, signature similarity, history retrieval, ensembles, adaptive baselines, forecasting, dependency intelligence, natural-language query, experiment generation | Not started |
+| 8 | Two operating systems send privacy-safe telemetry into the same schema | Agent built and run on macOS; Linux and Windows collectors are tested on fixture data only. Not yet demonstrated on two real systems. See [local-agent.md](architecture/local-agent.md). |
+| 9 | Recurring-regression detection, clustering, signature similarity, history retrieval, ensembles, adaptive baselines, forecasting, dependency intelligence, natural-language query, experiment generation | Done: recurrence detection, signature similarity, history retrieval, natural-language query. Not started: clustering, ensembles, adaptive baselines, forecasting, dependency intelligence, experiment generation. |
 
 ## 7. Test strategy
 

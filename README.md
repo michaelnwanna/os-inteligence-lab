@@ -62,6 +62,9 @@ Requires Python 3.10+. No Node, Docker or API keys are needed. Docker: `docker c
 | Investigation agent | [services/investigation](services/investigation) | Numbered evidence, provider-neutral LLM interface, deterministic offline provider, output validation that rejects invented numbers, commit hashes and uncited claims. |
 | GitHub code intelligence | `ail_investigation.repos`, `codeintel` | Read-only compare/commit API client plus a heuristic commit ranker; issue drafts (and opt-in creation). |
 | Portal | [apps/portal](apps/portal) | Command Center, Anomaly Explorer, Cohort Explorer, Investigation Workspace, Failure Time Machine. Dependency-free. |
+| Local agent | [packages/agent](packages/agent) | `ail agent enroll / preview / run / revoke`. Sends only approved signals (heartbeat, CPU load, memory in use) in the same schema; refuses to run without consent. |
+| Incident memory | `ail_investigation.history` | Remembers past incidents across runs; scores similarity by metric, cohort, failure signature and trigger type; cites recurrences as evidence. |
+| Ask in English | `ail_detection.nlq` | `ail ask "regressions in the last 7 days affecting ARM64 but not x64"`, also in the portal. Shows how it understood the question. |
 | Benchmarks | [docs/benchmarks/RESULTS.md](docs/benchmarks/RESULTS.md) | `ail evaluate` scores detection, cohorts, correlation and the agent against scenario ground truth. |
 
 ```mermaid
@@ -145,8 +148,8 @@ client.send_events([{"timestamp": "2026-03-10T12:00:30Z", "device_id": "d-1", "s
 | 5 AI investigation agent | Done | Grounded, provider-neutral; offline provider by default. |
 | 6 GitHub code intelligence | Partial | Read-only REST client, commit ranking, issue drafting. Not done: GitHub OAuth, repository picker UI, LLM-driven diff reading. |
 | 7 Failure Time Machine | Done | Play, pause, accelerate, rewind, step, per-stage evidence. |
-| 8 Real machine agent | Not started | |
-| 9 Intelligence platform | Not started | |
+| 8 Real machine agent | Partial | Opt-in local agent with consent, preview and revoke; collectors for macOS (run and tested here), Linux and Windows (parsers tested on fixtures, not run on those systems). The exit criterion (two real operating systems sending data) has not been demonstrated. |
+| 9 Intelligence platform | Partial | Done: historical incident retrieval and recurring-regression detection, failure-signature similarity, natural-language telemetry query. Not started: anomaly clustering, detector ensembles, adaptive baselines, forecast-based detection, dependency intelligence, automated experiment generation. |
 
 Deliberate deviations from the suggested stack are recorded in [docs/adr](docs/adr): SQLite instead of PostgreSQL/Redis for the first cut, an in-memory stream instead of Redis Streams, and a dependency-free portal instead of Next.js.
 
@@ -169,7 +172,7 @@ tests/                  unit and acceptance tests
 ## Development
 
 ```bash
-make test       # 70 tests, ~30 s
+make test       # 86 tests, ~40 s
 make lint
 make evaluate   # regenerate docs/benchmarks/RESULTS.md
 ```

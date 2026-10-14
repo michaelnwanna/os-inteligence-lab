@@ -50,7 +50,7 @@ async function renderHome() {
       kpi(sim ? sim.devices.toLocaleString() : "-", "Devices"),
       kpi((ov.meta.counts.aggregate_rows || 0).toLocaleString(), "Aggregate rows")));
   const chartBox = el("div", { class: "card", style: "margin-top:12px" });
-  show(el("h2", {}, "Population health"), chartBox);
+  show(askBox(), el("h2", {}, "Population health"), chartBox);
   const draw = async (metric) => {
     const s = await api(`/api/v1/series?metric=${metric}`);
     chartBox.replaceChildren(metricTabs(metric, draw), lineChart({
@@ -61,6 +61,24 @@ async function renderHome() {
   };
   await draw("failure_rate");
   show(el("h2", {}, "Incidents"), incidentTable(incs));
+}
+
+function askBox() {
+  const out = el("div", { class: "muted", style: "margin-top:8px" }, "Try: Show regressions in the last 7 days affecting ARM64 but not x64");
+  const input = el("input", { type: "text", style: "flex:1;min-width:240px", placeholder: "Ask about the telemetry…", "aria-label": "Ask a question" });
+  const ask = async () => {
+    if (input.value.trim().length < 3) return;
+    try {
+      const r = await api(`/api/v1/query?q=${encodeURIComponent(input.value)}`);
+      const q = r.query;
+      out.replaceChildren(el("div", {}, el("b", {}, r.answer)),
+        el("div", { class: "muted" }, `Understood as: ${METRICS[q.metric] || q.metric}, cohort ${label(q.include)}${q.exclude.length ? ", excluding " + q.exclude.map(label).join(", ") : ""}, window ${r.window[0]}\u2013${r.window[1]} UTC${r.window_clipped_to_available_data ? " (all available data)" : ""}.`),
+        q.notes.map((n) => el("div", { class: "muted" }, "Note: " + n)),
+        r.incidents.map((i) => el("div", {}, incidentLink(i.id), ` ${i.title} `, sev(i.severity))));
+    } catch (e) { out.replaceChildren(el("span", { class: "err" }, String(e.message))); }
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") ask(); });
+  return el("div", { class: "card", style: "margin-top:12px" }, el("div", { class: "filters", style: "margin:0" }, input, el("button", { class: "primary", onclick: ask }, "Ask")), out);
 }
 
 function incidentTable(incs) {
@@ -178,6 +196,9 @@ async function renderIncident(id) {
   if (inv?.candidate_commits.length) show(el("h2", {}, "Candidate commits (heuristic code review)"), el("div", { class: "card" }, inv.candidate_commits.map((c) => el("div", { class: "fact" },
     el("b", { class: "mono" }, c.sha.slice(0, 7)), `#${c.rank} ${c.message} `, el("span", { class: "muted" }, `(${c.component || "n/a"}, score ${c.score.toFixed(2)})`),
     c.reasons.length ? el("ul", { class: "muted" }, c.reasons.map((r) => el("li", {}, r))) : null, c.snippets.length ? el("pre", { class: "mono" }, c.snippets.join("\n")) : null))));
+  if (inc.similar_incidents.length) show(el("h2", {}, "Similar earlier incidents"), el("div", { class: "card" }, inc.similar_incidents.map((s) => el("div", { class: "fact" },
+    el("b", {}, s.id), s.title, " ", s.recurring ? pill("sev-high", "possible recurrence") : null,
+    el("div", { class: "muted" }, `similarity ${s.score.toFixed(2)} (metric ${s.components.metric}, cohort ${s.components.cohort.toFixed(2)}, signature ${s.components.signature.toFixed(2)}, trigger ${s.components.trigger})`)))));
   show(el("h2", {}, "Investigation timeline"), el("div", { class: "card" }, el("ul", { class: "events" }, inc.timeline.map((e) => el("li", { class: "seen" }, el("span", { class: "time" }, hhmm(e.ts)), el("b", {}, e.title), e.simulated_latency ? el("span", { class: "sim" }, "simulated pipeline clock") : null, e.detail ? el("div", { class: "muted" }, e.detail) : null)))));
   show(el("details", { style: "margin-top:16px" }, el("summary", {}, "Reproducibility"), el("pre", {}, JSON.stringify({ config_hash: inc.reproducibility.config_hash, data_fingerprint: inc.reproducibility.data_fingerprint, engine: inc.reproducibility.engine_version, detectors: inc.results.map((r) => `${r.detector}/${r.metric}`) }, null, 2))));
 }

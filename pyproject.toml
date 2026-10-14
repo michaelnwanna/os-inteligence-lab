@@ -28,6 +28,7 @@ ail = "ail_cli.main:main"
 packages = [
     "ail_schemas",
     "ail_sdk",
+    "ail_agent",
     "ail_simulator",
     "ail_ingestion",
     "ail_detection",
@@ -39,6 +40,7 @@ packages = [
 [tool.setuptools.package-dir]
 ail_schemas = "packages/schemas/ail_schemas"
 ail_sdk = "packages/sdk/ail_sdk"
+ail_agent = "packages/agent/ail_agent"
 ail_simulator = "packages/simulator/ail_simulator"
 ail_ingestion = "services/ingestion/ail_ingestion"
 ail_detection = "services/detection/ail_detection"

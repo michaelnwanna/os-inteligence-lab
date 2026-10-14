@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 _NUM = re.compile(r"(?<![\w.])\d+(?:\.\d+)?(?![\w])")
 _HEX = re.compile(r"\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b")
 _CERTAIN = re.compile(r"\b(proves?|proven|definitely|certainly|undoubtedly|guaranteed)\b", re.I)
-_ID = re.compile(r"^[EC]\d+$")
+_ID = re.compile(r"^[ECH]\d+$")
 
 
 class _Hyp(BaseModel):

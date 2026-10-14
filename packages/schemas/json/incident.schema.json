@@ -701,6 +701,14 @@
       "title": "Correlations",
       "type": "array"
     },
+    "similar_incidents": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Similar Incidents",
+      "type": "array"
+    },
     "investigation": {
       "anyOf": [
         {
