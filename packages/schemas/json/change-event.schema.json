@@ -1,0 +1,127 @@
+{
+  "additionalProperties": false,
+  "description": "A change to the environment that may explain a regression.",
+  "properties": {
+    "deployment_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Deployment Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "app_deployment",
+        "driver_update",
+        "os_update",
+        "config_change",
+        "dependency_update",
+        "infrastructure_change",
+        "git_commit"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "component": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Component",
+      "type": "string"
+    },
+    "dimension": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Dimension that gains `to_version`",
+      "title": "Dimension"
+    },
+    "from_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "From Version"
+    },
+    "to_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "To Version"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "repository": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Repository"
+    },
+    "base_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Base Ref"
+    },
+    "head_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Head Ref"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "deployment_id",
+    "timestamp",
+    "kind",
+    "component"
+  ],
+  "title": "ChangeEvent",
+  "type": "object"
+}

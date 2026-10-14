@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OS Intelligence Lab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="nav">
+    <div class="brand"><span class="logo">&#9670;</span> OS Intelligence Lab</div>
+    <nav id="nav">
+      <a href="#/" data-route="">Command Center</a>
+      <a href="#/anomalies" data-route="anomalies">Anomaly Explorer</a>
+      <a href="#/cohorts" data-route="cohorts">Cohort Explorer</a>
+      <a href="#/incidents" data-route="incidents">Investigations</a>
+      <a href="#/timemachine" data-route="timemachine">Failure Time Machine</a>
+    </nav>
+    <div class="nav-foot" id="nav-foot"></div>
+  </aside>
+  <main id="app" aria-live="polite"></main>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

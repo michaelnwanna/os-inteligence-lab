@@ -1,0 +1,60 @@
+id: scenario-003
+name: "ARM64 memory regression (flagship)"
+description: >
+  Application 2.1 is rolled out to 20% of devices starting at 13:52. A memory defect in the new
+  release makes ARM64 devices run out of memory: failure rate 0.4% -> 8.7% in the ARM64 + App 2.1
+  cohort, which is only ~4% of the population. A driver update before and an OS update after the
+  anomaly act as distractors.
+seed: 3
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 70
+    ramp_minutes: 20
+    max_exposure: 0.6
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 112
+    ramp_minutes: 20
+    max_exposure: 0.2
+    description: Atlas 2.1 rollout
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 150
+    ramp_minutes: 10
+    max_exposure: 0.3
+effects:
+  - id: fx-arm64-memory
+    where: {architecture: arm64, application_version: "2.1"}
+    failure_rate: 0.087
+    memory_multiplier: 2.4
+    latency_multiplier: 1.15
+    signature: "OOM_KILL|MemoryCache.Allocate"
+    description: Memory defect in Atlas 2.1 on ARM64
+expected:
+  incidents: 1
+  effect_start_minute: 112
+  cohort: {architecture: arm64, application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate
+  culprit_commit: 3f28a91c07b5e4d2a9f68b1e0c5d7a3948bf12ce

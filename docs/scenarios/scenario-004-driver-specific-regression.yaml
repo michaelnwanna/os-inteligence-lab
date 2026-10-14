@@ -1,0 +1,43 @@
+id: scenario-004
+name: Driver-specific regression
+description: >
+  Graphics driver 7.14 is rolled out to 30% of devices at 13:40. On x64 hardware it crashes the
+  application during present. An unrelated application rollout happens earlier as a distractor.
+seed: 4
+duration_minutes: 180
+population:
+  devices: 100000
+  drivers: {"7.12": 1.0}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 75
+    ramp_minutes: 20
+    max_exposure: 0.25
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.12"
+    to_version: "7.14"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.3
+effects:
+  - id: fx-driver-x64
+    where: {architecture: x64, driver_version: "7.14"}
+    failure_rate: 0.06
+    signature: "ACCESS_VIOLATION|Gfx.Driver.Present"
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {architecture: x64, driver_version: "7.14"}
+  trigger: drv-7.14
+  metric: failure_rate

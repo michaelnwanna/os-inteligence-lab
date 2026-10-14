@@ -1,0 +1,757 @@
+{
+  "$defs": {
+    "AnomalyResult": {
+      "description": "Standard output of every detector.",
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "When the detector fired",
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "onset": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Estimated start of the change",
+          "title": "Onset"
+        },
+        "baseline": {
+          "title": "Baseline",
+          "type": "number"
+        },
+        "observed_value": {
+          "title": "Observed Value",
+          "type": "number"
+        },
+        "delta": {
+          "title": "Delta",
+          "type": "number"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "severity_score": {
+          "title": "Severity Score",
+          "type": "number"
+        },
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "affected_population": {
+          "description": "Share of sessions covered, 0-1",
+          "title": "Affected Population",
+          "type": "number"
+        },
+        "detector": {
+          "title": "Detector",
+          "type": "string"
+        },
+        "dimensions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "metric",
+        "timestamp",
+        "baseline",
+        "observed_value",
+        "delta",
+        "severity",
+        "severity_score",
+        "confidence",
+        "affected_population",
+        "detector"
+      ],
+      "title": "AnomalyResult",
+      "type": "object"
+    },
+    "CandidateCommit": {
+      "properties": {
+        "sha": {
+          "title": "Sha",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Files",
+          "type": "array"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Component"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "rank": {
+          "title": "Rank",
+          "type": "integer"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "snippets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Snippets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sha",
+        "message",
+        "files",
+        "score",
+        "rank"
+      ],
+      "title": "CandidateCommit",
+      "type": "object"
+    },
+    "ChangeEvent": {
+      "additionalProperties": false,
+      "description": "A change to the environment that may explain a regression.",
+      "properties": {
+        "deployment_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Deployment Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "app_deployment",
+            "driver_update",
+            "os_update",
+            "config_change",
+            "dependency_update",
+            "infrastructure_change",
+            "git_commit"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "component": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Component",
+          "type": "string"
+        },
+        "dimension": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Dimension that gains `to_version`",
+          "title": "Dimension"
+        },
+        "from_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From Version"
+        },
+        "to_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To Version"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repository"
+        },
+        "base_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Ref"
+        },
+        "head_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Head Ref"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "deployment_id",
+        "timestamp",
+        "kind",
+        "component"
+      ],
+      "title": "ChangeEvent",
+      "type": "object"
+    },
+    "CohortFinding": {
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "dimensions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "sessions": {
+          "title": "Sessions",
+          "type": "number"
+        },
+        "baseline": {
+          "title": "Baseline",
+          "type": "number"
+        },
+        "observed": {
+          "title": "Observed",
+          "type": "number"
+        },
+        "ratio": {
+          "title": "Ratio",
+          "type": "number"
+        },
+        "delta": {
+          "title": "Delta",
+          "type": "number"
+        },
+        "llr": {
+          "title": "Llr",
+          "type": "number"
+        },
+        "p_value": {
+          "description": "Bonferroni-adjusted over all candidate cohorts",
+          "title": "P Value",
+          "type": "number"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "population_share": {
+          "title": "Population Share",
+          "type": "number"
+        },
+        "excess_share": {
+          "title": "Excess Share",
+          "type": "number"
+        },
+        "rank": {
+          "title": "Rank",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "metric",
+        "dimensions",
+        "sessions",
+        "baseline",
+        "observed",
+        "ratio",
+        "delta",
+        "llr",
+        "p_value",
+        "severity",
+        "population_share",
+        "excess_share",
+        "rank"
+      ],
+      "title": "CohortFinding",
+      "type": "object"
+    },
+    "CorrelationCandidate": {
+      "properties": {
+        "change": {
+          "$ref": "#/$defs/ChangeEvent"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "temporal_score": {
+          "title": "Temporal Score",
+          "type": "number"
+        },
+        "overlap": {
+          "title": "Overlap",
+          "type": "number"
+        },
+        "delta_minutes": {
+          "description": "Anomaly onset minus change time",
+          "title": "Delta Minutes",
+          "type": "number"
+        },
+        "after_onset": {
+          "title": "After Onset",
+          "type": "boolean"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "change",
+        "score",
+        "temporal_score",
+        "overlap",
+        "delta_minutes",
+        "after_onset",
+        "rationale"
+      ],
+      "title": "CorrelationCandidate",
+      "type": "object"
+    },
+    "EvidenceItem": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "statement"
+      ],
+      "title": "EvidenceItem",
+      "type": "object"
+    },
+    "Hypothesis": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "supporting_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Evidence",
+          "type": "array"
+        },
+        "label": {
+          "const": "hypothesis",
+          "default": "hypothesis",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "rationale",
+        "confidence",
+        "supporting_evidence"
+      ],
+      "title": "Hypothesis",
+      "type": "object"
+    },
+    "Investigation": {
+      "properties": {
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "observed_facts": {
+          "items": {
+            "$ref": "#/$defs/EvidenceItem"
+          },
+          "title": "Observed Facts",
+          "type": "array"
+        },
+        "hypotheses": {
+          "items": {
+            "$ref": "#/$defs/Hypothesis"
+          },
+          "title": "Hypotheses",
+          "type": "array"
+        },
+        "recommended_steps": {
+          "items": {
+            "$ref": "#/$defs/RecommendedStep"
+          },
+          "title": "Recommended Steps",
+          "type": "array"
+        },
+        "candidate_commits": {
+          "items": {
+            "$ref": "#/$defs/CandidateCommit"
+          },
+          "title": "Candidate Commits",
+          "type": "array"
+        },
+        "guardrail": {
+          "additionalProperties": true,
+          "title": "Guardrail",
+          "type": "object"
+        }
+      },
+      "required": [
+        "provider",
+        "summary",
+        "observed_facts",
+        "hypotheses",
+        "recommended_steps"
+      ],
+      "title": "Investigation",
+      "type": "object"
+    },
+    "RecommendedStep": {
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "step"
+      ],
+      "title": "RecommendedStep",
+      "type": "object"
+    },
+    "TimelineEvent": {
+      "properties": {
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "default": "",
+          "title": "Detail",
+          "type": "string"
+        },
+        "simulated_latency": {
+          "default": false,
+          "title": "Simulated Latency",
+          "type": "boolean"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "ts",
+        "kind",
+        "title"
+      ],
+      "title": "TimelineEvent",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "investigating",
+        "resolved"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "metric": {
+      "title": "Metric",
+      "type": "string"
+    },
+    "onset": {
+      "format": "date-time",
+      "title": "Onset",
+      "type": "string"
+    },
+    "first_detection": {
+      "format": "date-time",
+      "title": "First Detection",
+      "type": "string"
+    },
+    "confirmed": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confirmed"
+    },
+    "baseline": {
+      "title": "Baseline",
+      "type": "number"
+    },
+    "observed": {
+      "title": "Observed",
+      "type": "number"
+    },
+    "global_baseline": {
+      "title": "Global Baseline",
+      "type": "number"
+    },
+    "global_observed": {
+      "title": "Global Observed",
+      "type": "number"
+    },
+    "supporting_metrics": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Supporting Metrics",
+      "type": "array"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/AnomalyResult"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "cohorts": {
+      "items": {
+        "$ref": "#/$defs/CohortFinding"
+      },
+      "title": "Cohorts",
+      "type": "array"
+    },
+    "signatures": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Signatures",
+      "type": "array"
+    },
+    "correlations": {
+      "items": {
+        "$ref": "#/$defs/CorrelationCandidate"
+      },
+      "title": "Correlations",
+      "type": "array"
+    },
+    "investigation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Investigation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "timeline": {
+      "items": {
+        "$ref": "#/$defs/TimelineEvent"
+      },
+      "title": "Timeline",
+      "type": "array"
+    },
+    "timemachine": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timemachine"
+    },
+    "reproducibility": {
+      "additionalProperties": true,
+      "title": "Reproducibility",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "status",
+    "severity",
+    "metric",
+    "onset",
+    "first_detection",
+    "baseline",
+    "observed",
+    "global_baseline",
+    "global_observed",
+    "results"
+  ],
+  "title": "Incident",
+  "type": "object"
+}

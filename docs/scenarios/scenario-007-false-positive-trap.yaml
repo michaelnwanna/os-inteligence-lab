@@ -1,0 +1,43 @@
+id: scenario-007
+name: False-positive trap
+description: >
+  A 3x traffic surge and a one-minute failure blip occur while two benign rollouts progress.
+  Rate-based detection must not fire on volume alone, and a transient blip must not become an
+  incident.
+seed: 7
+duration_minutes: 180
+population:
+  devices: 100000
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 90
+    ramp_minutes: 20
+    max_exposure: 0.5
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.3
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+traffic:
+  - {start_minute: 85, end_minute: 105, multiplier: 3.0}
+effects:
+  - id: fx-blip
+    where: {}
+    start_minute: 125
+    end_minute: 126
+    failure_rate: 0.008
+expected:
+  incidents: 0

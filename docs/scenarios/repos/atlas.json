@@ -1,0 +1,88 @@
+{
+  "name": "fixture/atlas",
+  "description": "Controlled test repository: seven commits between v2.0 and v2.1, exactly one of which introduces a memory-retention defect.",
+  "releases": [
+    {"tag": "v2.0", "date": "2026-02-24T09:00:00Z"},
+    {"tag": "v2.1", "date": "2026-03-10T11:30:00Z"}
+  ],
+  "compares": {
+    "v2.0...v2.1": {
+      "commits": [
+        {
+          "sha": "0b7c3de95a1f4c27d8e6b03a9f5c1e7248d0a6b3",
+          "message": "Fix typos in README and changelog",
+          "author": "dev-doc",
+          "date": "2026-02-25T10:02:00Z",
+          "files": [
+            {"path": "README.md", "status": "modified", "additions": 3, "deletions": 3,
+             "patch": "@@ -12,7 +12,7 @@\n-Atlas is a cross-platfrom runtime\n+Atlas is a cross-platform runtime"},
+            {"path": "CHANGELOG.md", "status": "modified", "additions": 2, "deletions": 2,
+             "patch": "@@ -1,4 +1,4 @@\n-## 2.1.0 (unrelased)\n+## 2.1.0 (unreleased)"}
+          ]
+        },
+        {
+          "sha": "e1f6a45c8d2b7093f4a6e1c58b3d90a72f4e6c15",
+          "message": "Tune telemetry batch size to 500 events",
+          "author": "dev-telemetry",
+          "date": "2026-02-27T14:40:00Z",
+          "files": [
+            {"path": "src/telemetry/batcher.cpp", "status": "modified", "additions": 4, "deletions": 4,
+             "patch": "@@ -31,7 +31,7 @@ void Batcher::Flush() {\n-  constexpr size_t kBatchSize = 200;\n+  constexpr size_t kBatchSize = 500;"}
+          ]
+        },
+        {
+          "sha": "7d20b9a4e5c13f68a2d09b7e4c1f5a8360d2e9b1",
+          "message": "Enable NEON optimisation flags for the arm64 build",
+          "author": "dev-build",
+          "date": "2026-03-01T09:15:00Z",
+          "files": [
+            {"path": "build/arm64.cmake", "status": "modified", "additions": 3, "deletions": 1,
+             "patch": "@@ -4,5 +4,7 @@\n-set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -O2\")\n+set(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} -O3 -march=armv8-a+simd\")\n+# NEON is available on all supported arm64 devices"}
+          ]
+        },
+        {
+          "sha": "3f28a91c07b5e4d2a9f68b1e0c5d7a3948bf12ce",
+          "message": "Cache decoded asset buffers in MemoryCache for faster scene loads",
+          "author": "dev-runtime",
+          "date": "2026-03-03T16:20:00Z",
+          "files": [
+            {"path": "src/runtime/memory_cache.cpp", "status": "modified", "additions": 31, "deletions": 9,
+             "patch": "@@ -42,15 +42,37 @@ Buffer* MemoryCache::Acquire(const Key& key) {\n-  auto it = pool_.find(key);\n-  if (it != pool_.end()) {\n-    return it->second.get();\n-  }\n-  auto buffer = Decode(key);\n-  pool_.emplace(key, std::move(buffer));\n-  return pool_[key].get();\n+  auto it = entries_.find(key);\n+  if (it != entries_.end()) {\n+    return it->second.get();\n+  }\n+  auto buffer = std::make_shared<Buffer>(Decode(key));\n+  // keep the decoded buffer alive for NEON-aligned reuse across requests\n+  entries_[key] = buffer;\n+  return buffer.get();\n@@ -80,12 +102,4 @@ void MemoryCache::EndRequest(const Key& key) {\n-  pool_.erase(key);\n-  Release(key);\n+  // TODO: eviction policy for entries_"},
+            {"path": "src/runtime/memory_cache.h", "status": "modified", "additions": 5, "deletions": 3,
+             "patch": "@@ -18,7 +18,9 @@ class MemoryCache {\n-  std::unordered_map<Key, std::unique_ptr<Buffer>> pool_;\n+  static std::unordered_map<Key, std::shared_ptr<Buffer>> entries_;"}
+          ]
+        },
+        {
+          "sha": "c8e04f7b2a91d3e56f08b4c7a1d92e3f50b6c847",
+          "message": "Refactor settings parser to validate against a schema",
+          "author": "dev-settings",
+          "date": "2026-03-05T11:05:00Z",
+          "files": [
+            {"path": "src/settings/parser.cpp", "status": "modified", "additions": 58, "deletions": 44,
+             "patch": "@@ -10,12 +10,18 @@ Settings Parse(const std::string& text) {\n-  auto doc = json::parse(text);\n+  auto doc = json::parse(text);\n+  Validate(doc, kSettingsSchema);\n   return FromJson(doc);"}
+          ]
+        },
+        {
+          "sha": "5be7d31a09c84f2e6b1d7a3c05e98f4b2d6c1a70",
+          "message": "Bump logging library to 4.2.1",
+          "author": "dev-deps",
+          "date": "2026-03-06T08:30:00Z",
+          "files": [
+            {"path": "third_party/log/VERSION", "status": "modified", "additions": 1, "deletions": 1,
+             "patch": "@@ -1 +1 @@\n-4.2.0\n+4.2.1"}
+          ]
+        },
+        {
+          "sha": "a91c0e2f4b7d6830c15e9a2b7f40d8e3c6a51b92",
+          "message": "Update onboarding copy for the new feature tour",
+          "author": "dev-ui",
+          "date": "2026-03-09T13:45:00Z",
+          "files": [
+            {"path": "src/ui/onboarding.ts", "status": "modified", "additions": 12, "deletions": 6,
+             "patch": "@@ -5,6 +5,12 @@ export const tour = [\n-  'Welcome to Atlas',\n+  'Welcome to Atlas 2.1'"}
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+services:
+  ail:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      AIL_API_TOKEN: ${AIL_API_TOKEN:-}
+      AIL_LLM_PROVIDER: ${AIL_LLM_PROVIDER:-rules}
+      AIL_LLM_API_KEY: ${AIL_LLM_API_KEY:-}
+      AIL_LLM_MODEL: ${AIL_LLM_MODEL:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - ail-data:/app/data
+
+volumes:
+  ail-data:

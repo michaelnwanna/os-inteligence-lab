@@ -1,0 +1,54 @@
+id: scenario-006
+name: Deployment-correlated regression
+description: >
+  Application 2.1 raises the failure rate on every architecture. A driver update shortly before
+  and an OS update shortly after overlap in time and are plausible-but-wrong triggers; the
+  deployment should rank first.
+seed: 6
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 85
+    ramp_minutes: 15
+    max_exposure: 0.5
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 105
+    ramp_minutes: 10
+    max_exposure: 0.4
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 125
+    ramp_minutes: 10
+    max_exposure: 0.3
+effects:
+  - id: fx-app-2.1
+    where: {application_version: "2.1"}
+    failure_rate: 0.03
+    signature: "NULL_REFERENCE|Sync.Merge"
+expected:
+  incidents: 1
+  effect_start_minute: 105
+  cohort: {application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate

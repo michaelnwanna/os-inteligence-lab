@@ -1,0 +1,41 @@
+id: scenario-002
+name: Global crash regression
+description: >
+  A feature-flag configuration change at 14:00 raises the crash rate for every device. There is no
+  specific cohort; the correct answer is a global incident correlated with the config change.
+seed: 2
+duration_minutes: 180
+population:
+  devices: 100000
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 85
+    ramp_minutes: 20
+    max_exposure: 0.2
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+changes:
+  - id: cfg-flag-rollout
+    kind: config_change
+    component: feature-flags
+    at_minute: 120
+    description: "Enabled feature flag 'fast-sync' for 100% of devices"
+effects:
+  - id: fx-global-crash
+    where: {}
+    start_minute: 120
+    failure_rate: 0.03
+    signature: "UNHANDLED_EXCEPTION|Core.FlagEval"
+expected:
+  incidents: 1
+  effect_start_minute: 120
+  cohort: null
+  trigger: cfg-flag-rollout
+  metric: failure_rate

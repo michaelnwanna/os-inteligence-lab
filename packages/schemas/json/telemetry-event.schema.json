@@ -1,0 +1,220 @@
+{
+  "additionalProperties": false,
+  "description": "One telemetry record.\n\n`session` events describe a completed session (a set `failure_signature` marks a failed\nsession). `crash` is accepted as an alias for a failed session. `metric` events carry a gauge\nsample in `metric_name` / `metric_value`.",
+  "properties": {
+    "event_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event Id"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "device_id": {
+      "description": "Pseudonymous device id",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Device Id",
+      "type": "string"
+    },
+    "session_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "os": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Os",
+      "type": "string"
+    },
+    "os_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Os Version",
+      "type": "string"
+    },
+    "os_build": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Os Build"
+    },
+    "architecture": {
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Architecture",
+      "type": "string"
+    },
+    "device_model": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Device Model",
+      "type": "string"
+    },
+    "cpu": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cpu"
+    },
+    "memory_gb": {
+      "anyOf": [
+        {
+          "maximum": 100000,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Memory Gb"
+    },
+    "application": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Application",
+      "type": "string"
+    },
+    "application_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Application Version",
+      "type": "string"
+    },
+    "driver": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Driver"
+    },
+    "driver_version": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Driver Version"
+    },
+    "event_type": {
+      "enum": [
+        "session",
+        "crash",
+        "metric"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "metric_name": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Metric Name"
+    },
+    "metric_value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Metric Value"
+    },
+    "failure_signature": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Failure Signature"
+    },
+    "deployment_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deployment Id"
+    },
+    "dimensions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Dimensions",
+      "type": "object"
+    }
+  },
+  "required": [
+    "timestamp",
+    "device_id",
+    "session_id",
+    "os",
+    "os_version",
+    "architecture",
+    "device_model",
+    "application",
+    "application_version",
+    "event_type"
+  ],
+  "title": "TelemetryEvent",
+  "type": "object"
+}

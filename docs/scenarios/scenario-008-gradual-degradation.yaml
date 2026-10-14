@@ -1,0 +1,38 @@
+id: scenario-008
+name: Gradual degradation
+description: >
+  Application 2.1 slowly leaks memory: failure rate and memory climb over an hour instead of
+  stepping. Step detectors are slow here; change-point and CUSUM statistics should still catch it.
+seed: 8
+duration_minutes: 180
+population:
+  devices: 100000
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.5
+    repository: fixture/atlas
+    base_ref: v2.0
+    head_ref: v2.1
+effects:
+  - id: fx-leak
+    where: {application_version: "2.1"}
+    start_minute: 100
+    ramp_minutes: 60
+    failure_rate: 0.03
+    memory_multiplier: 2.0
+    signature: "OOM_KILL|MemoryCache.Allocate"
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate
+  culprit_commit: 3f28a91c07b5e4d2a9f68b1e0c5d7a3948bf12ce

@@ -1,0 +1,31 @@
+id: scenario-005
+name: Performance degradation
+description: >
+  AtlasOS 13.0 rolls out to 25% of devices at 13:40 and request latency rises 1.8x on updated
+  devices. Failure rate does not change, so only the latency metric reveals the regression.
+seed: 5
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+  drivers: {"7.12": 0.5, "7.13": 0.5}
+rollouts:
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 100
+    ramp_minutes: 15
+    max_exposure: 0.5
+effects:
+  - id: fx-os-latency
+    where: {os_version: "13.0"}
+    latency_multiplier: 1.8
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {os_version: "13.0"}
+  trigger: os-13.0-update
+  metric: latency_ms

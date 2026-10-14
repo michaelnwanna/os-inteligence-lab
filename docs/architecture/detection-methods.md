@@ -1,0 +1,46 @@
+# Detection methods
+
+## Baseline and dispersion
+
+For the first 60 minutes the engine fits a baseline: `p0` (failure rate) or `mu0, sigma0` (gauges). It also estimates an over-dispersion factor `phi` as the variance of per-minute standardized residuals in the baseline (clamped to 1..25). Every z-score below is divided by `sqrt(phi)`, so noisier-than-binomial fleets do not generate false alarms.
+
+Rate residual: `z = (k - n p0) / sqrt(n p0 (1 - p0))`. Gauge residual: `z = (mean - mu0) sqrt(n) / sigma0`.
+
+## Detectors
+
+| Detector | Statistic | Alarm | Onset estimate |
+|---|---|---|---|
+| `ZScoreDetector` | trailing 5-minute window z | z > 5 for 3 consecutive minutes | change-point refinement |
+| `EwmaCusumDetector` | one-sided CUSUM (`k=0.5`, `h=8`) and EWMA (`lambda=0.2`, `L=4.5`) on per-minute z | either chart crosses | last CUSUM zero |
+| `ChangePointDetector` | max over split points of the LLR of "segment differs from baseline" | LLR > 15 and relative change >= 10% | arg-max split |
+| `DistributionShiftDetector` | baseline vs trailing 10 minutes: two-proportion z / Welch t | z > 5 for 3 minutes | change-point refinement |
+| `MLDetector` | Mahalanobis distance of the (rate, latency, memory) z-vector, mean/covariance fitted on the baseline | d² > 40 for 3 minutes, at least one component positive | change-point refinement |
+| `CohortScanDetector` | scan statistic, below | same cohort tops the scan on 2 consecutive minutes | change point of the cohort's excess |
+
+Only deterioration (increases) alerts. Every alarm must still hold `confirm_minutes` (2) later, which discards blips; alarms too close to the end of data to confirm are kept and flagged `confirmed: null`.
+
+`AnomalyResult.confidence` is `s² / (1 + s²)` where `s` is the statistic over its threshold at confirmation (1x gives 0.50, 2x gives 0.80). It is a saturating strength score, not a calibrated probability.
+
+Severity is a deterministic function of observed/baseline: rates critical >= 5x, high >= 2.5x, moderate >= 1.25x; gauges critical >= 2x, high >= 1.5x, moderate >= 1.2x. An incident takes the maximum of its cohort and fleet-wide severities.
+
+## Cohort scan
+
+Candidates are all value combinations over up to three dimensions that actually vary in the data (449 on the demo fleet, which has 144 cohort cells).
+
+**Expected value per cell.** Starting from the fleet-wide baseline, estimates are refined down a hierarchy (architecture, then architecture+model+app, then +OS, then +driver, then all dimensions) with shrinkage `(K + m * parent) / (N + m)`, `m = 20,000` sessions for rates. A cell that did not exist in the baseline (a new app version) inherits the estimate of the hardware/OS group it belongs to, so a brand-new version is compared with the right peers.
+
+**Statistic.** For a cohort with observed failures `O` and expected `E`, the Poisson log-likelihood ratio `O ln(O/E) - O + E` (gauges: `(O - E)^2 / (2 sigma^2 n)`). `E` is first scaled by the excess elevation of the *rest* of the population, so a global regression does not make a random slice look special.
+
+**Selection.** Score `LLR - 2 (depth - 1)`: an extra dimension must pay for itself. Guards: at least 15 failures and a ratio of at least 1.5 (gauges 1.1). The best candidate must have a Bonferroni-adjusted p < 0.001 (`p = N_candidates * 0.5 * erfc(sqrt(LLR))`). The cohort is then removed ("explained away") and the scan repeats for up to three cohorts.
+
+## Correlation
+
+For every recorded change: `temporal = exp(-max(onset - change_time, 0) / 60 min)`, and zero if the change began more than 3 minutes after the onset. `overlap` is the share of the excess (observed minus expected) in the union of the anomalous cohort and the population touched by the change that lies in their intersection. `score = 0.4 temporal + 0.6 overlap`. This ranks candidates; it does not establish causation, and every surface says so.
+
+## Why not plain thresholds?
+
+A threshold on the fleet-wide failure rate misses the flagship regression (0.38% to 0.67%) until it is far too late, and fires on traffic surges that change volume but not the rate. Working on rates with per-cell expectations, dispersion adjustment, persistence and cohort scans addresses both.
+
+## Evaluation
+
+`ail evaluate` runs every scenario with several seeds and reports precision, recall, F1, detection latency, false-positive rate, cohort accuracy, correlation top-1/top-3 and agent grounding. Results are in [../benchmarks/RESULTS.md](../benchmarks/RESULTS.md).
