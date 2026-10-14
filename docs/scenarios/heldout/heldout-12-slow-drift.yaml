@@ -1,0 +1,31 @@
+id: heldout-12
+name: Slow drift over two hours
+description: >
+  App 2.1 raises the failure rate from 0.4% to 1.0%, but the effect builds up linearly over 120 minutes
+  instead of stepping. A slow, small change.
+seed: 112
+duration_minutes: 240
+population:
+  devices: 100000
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.5
+effects:
+  - id: fx-drift
+    where: {application_version: "2.1"}
+    start_minute: 100
+    ramp_minutes: 120
+    failure_rate: 0.010
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate

@@ -90,8 +90,13 @@ def _rate(num: float, den: float) -> str:
     return f"{num / den * 100:.0f}% ({int(num)}/{int(den)})" if den else "n/a"
 
 
-def evaluate(devices: int | None = 50_000, seeds: int = 3, progress=print, heldout: bool = False) -> str:
+def evaluate(devices: int | None = 50_000, seeds: int = 3, progress=print, heldout: bool = False,
+             only: str | None = None) -> str:
     scenarios = list_heldout_scenarios() if heldout else list_scenarios()
+    if only:
+        scenarios = [sc for sc in scenarios if sc.id == only]
+        if not scenarios:
+            raise SystemExit(f"no scenario '{only}' in this set")
     runs: list[RunResult] = []
     for sc in scenarios:
         for k in range(seeds):

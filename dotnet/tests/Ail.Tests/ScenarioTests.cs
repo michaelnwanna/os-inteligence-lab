@@ -15,7 +15,7 @@ public class ScenarioTests
     public void HeldoutScenariosAreSeparateFromTheTunedTen()
     {
         var heldout = ScenarioLoader.LoadHeldout();
-        Assert.Equal(8, heldout.Count);
+        Assert.Equal(14, heldout.Count);
         Assert.DoesNotContain(heldout, h => ScenarioLoader.LoadAll().Any(s => s.Id == h.Id));
     }
 

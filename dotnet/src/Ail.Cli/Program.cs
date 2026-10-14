@@ -54,7 +54,7 @@ static class Cli
           serve     [--db PATH] [--host H] [--port P]
           report    INCIDENT_ID [--db PATH]
           scenarios
-          evaluate  [--devices N] [--seeds N] [--heldout] [--output FILE]
+          evaluate  [--devices N] [--seeds N] [--heldout] [--scenario ID] [--output FILE]
         """;
 
     public static int Run(string[] args)
@@ -181,7 +181,7 @@ static class Cli
     private static void Evaluate(Opts o)
     {
         var heldout = o.Has("heldout");
-        var text = Evaluation.Evaluate(o.Int("devices") ?? (heldout ? null : 50_000), o.Int("seeds") ?? 3, Console.Error.WriteLine, heldout);
+        var text = Evaluation.Evaluate(o.Int("devices") ?? (heldout ? null : 50_000), o.Int("seeds") ?? 3, Console.Error.WriteLine, heldout, o.Get("scenario"));
         if (o.Get("output") is { } path) { File.WriteAllText(path, text); Console.WriteLine($"wrote {path}"); }
         else Console.WriteLine(text);
     }

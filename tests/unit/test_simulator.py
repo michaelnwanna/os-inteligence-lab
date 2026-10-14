@@ -67,6 +67,6 @@ def test_heldout_scenarios_load_and_stay_separate_from_the_tuned_ten():
     from ail_simulator import list_heldout_scenarios, list_scenarios
 
     heldout = list_heldout_scenarios()
-    assert len(heldout) == 8
+    assert len(heldout) == 14
     assert all(sc.id.startswith("heldout-") for sc in heldout)
     assert not {sc.id for sc in heldout} & {sc.id for sc in list_scenarios()}

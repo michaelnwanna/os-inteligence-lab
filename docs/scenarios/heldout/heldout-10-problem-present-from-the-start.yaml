@@ -1,0 +1,34 @@
+id: heldout-10
+name: Chronic problem in the baseline, then a new regression
+description: >
+  x86 devices have failed at 5% since before the run began, so the baseline already contains that problem and
+  it is not a regression. At minute 100 a genuinely new regression hits ARM64 + App 2.1. Only the new one is
+  an incident.
+seed: 110
+duration_minutes: 180
+population:
+  devices: 100000
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 15
+    max_exposure: 0.3
+effects:
+  - id: fx-x86-chronic
+    where: {architecture: x86}
+    start_minute: 0
+    failure_rate: 0.05
+  - id: fx-arm64
+    where: {architecture: arm64, application_version: "2.1"}
+    failure_rate: 0.09
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {architecture: arm64, application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate

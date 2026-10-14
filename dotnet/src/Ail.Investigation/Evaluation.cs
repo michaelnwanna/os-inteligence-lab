@@ -122,9 +122,11 @@ public static class Evaluation
         return sb.ToString();
     }
 
-    public static string Evaluate(int? devices = 50_000, int seeds = 3, Action<string>? progress = null, bool heldout = false)
+    public static string Evaluate(int? devices = 50_000, int seeds = 3, Action<string>? progress = null, bool heldout = false, string? only = null)
     {
         var scenarios = heldout ? ScenarioLoader.LoadHeldout() : ScenarioLoader.LoadAll();
+        if (only is not null) scenarios = scenarios.Where(s => s.Id == only).ToList();
+        if (scenarios.Count == 0) throw new ArgumentException($"no scenario '{only}' in this set");
         var runs = new List<RunResult>();
         foreach (var sc in scenarios)
             for (var k = 0; k < seeds; k++)

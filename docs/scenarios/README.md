@@ -21,8 +21,13 @@ Scenario files are plain YAML validated by `ail_simulator.config.Scenario`. To a
 
 ## Held-out scenarios
 
-`heldout/` holds eight further scenarios (different fleet sizes from 5,000 to 100,000 devices, noisier baselines, a mild
-regression, a latency-only cohort, a six-hour run, a rolled-back release and a clean run with traffic swings). They were
-written after the detector settings were fixed and are never used for tuning; run them with `ail evaluate --heldout`.
+`heldout/` holds fourteen further scenarios that were written after the detector settings were fixed and are never used for
+tuning; run them with `ail evaluate --heldout` (add `--scenario heldout-13 --seeds 50` to measure the false-alarm rate on the
+clean reference run). 01 to 08: different fleet sizes (5,000 to 100,000 devices), noisier baselines, a mild regression, a
+latency-only cohort, a six-hour run, a rolled-back release, a clean run with traffic swings. 09 to 14 are adversarial:
+overlapping cohorts twenty minutes apart, a chronic problem already in the baseline, a regression at a traffic peak, a slow
+drift over two hours, a clean reference run, and a failure regression together with a latency regression.
+
 Results: [RESULTS-heldout.md](../benchmarks/RESULTS-heldout.md) (Python) and
-[RESULTS-heldout-dotnet.md](../benchmarks/RESULTS-heldout-dotnet.md) (.NET).
+[RESULTS-heldout-dotnet.md](../benchmarks/RESULTS-heldout-dotnet.md) (.NET). The Python edition fails `heldout-09` on seed 109
+(known, not fixed: changing the grouping rules after seeing this result would make the scenario part of the tuning set).

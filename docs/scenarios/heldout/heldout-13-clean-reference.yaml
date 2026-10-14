@@ -1,0 +1,30 @@
+id: heldout-13
+name: Clean reference run
+description: >
+  A healthy 50,000-device fleet with two benign rollouts. Run it with many seeds
+  (`ail evaluate --heldout --scenario heldout-13 --seeds 50`) to measure the false-alarm rate.
+seed: 200
+duration_minutes: 180
+population:
+  devices: 50000
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 90
+    ramp_minutes: 20
+    max_exposure: 0.6
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 112
+    ramp_minutes: 20
+    max_exposure: 0.2
+expected:
+  incidents: 0
