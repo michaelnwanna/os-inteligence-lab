@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ail.Api\Ail.Api.csproj" />
+    <ProjectReference Include="..\Ail.Simulator\Ail.Simulator.csproj" />
+    <ProjectReference Include="..\Ail.Ingestion\Ail.Ingestion.csproj" />
+    <ProjectReference Include="..\Ail.Detection\Ail.Detection.csproj" />
+    <ProjectReference Include="..\Ail.Investigation\Ail.Investigation.csproj" />
+    <ProjectReference Include="..\Ail.Schemas\Ail.Schemas.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ail</AssemblyName>
+    <RootNamespace>Ail.Cli</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

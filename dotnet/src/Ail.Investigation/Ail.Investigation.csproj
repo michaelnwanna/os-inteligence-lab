@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ail.Schemas\Ail.Schemas.csproj" />
+    <ProjectReference Include="..\Ail.Detection\Ail.Detection.csproj" />
+    <ProjectReference Include="..\Ail.Simulator\Ail.Simulator.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

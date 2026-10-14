@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ail.Schemas\Ail.Schemas.csproj" />
+    <ProjectReference Include="..\Ail.Simulator\Ail.Simulator.csproj" />
+    <ProjectReference Include="..\Ail.Ingestion\Ail.Ingestion.csproj" />
+    <ProjectReference Include="..\Ail.Detection\Ail.Detection.csproj" />
+    <ProjectReference Include="..\Ail.Investigation\Ail.Investigation.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

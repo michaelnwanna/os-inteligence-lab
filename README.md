@@ -49,7 +49,8 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/ail serve --db data/demo.db
 ```
 
-Requires Python 3.10+. No Node, Docker or API keys are needed. Docker: `docker compose -f infrastructure/docker-compose.yml up --build`.
+Requires Python 3.10+. No Node, Docker or API keys are needed. A C#/.NET 10 edition of the engine, API and CLI is in
+[dotnet/](dotnet/README.md): `dotnet run --project dotnet/src/Ail.Cli -c Release -- demo --serve`. Docker: `docker compose -f infrastructure/docker-compose.yml up --build`.
 
 ## What is in the box
 
@@ -187,6 +188,7 @@ packages/simulator/     synthetic fleet simulator
 docs/                   PRD, architecture, ADRs, scenarios, benchmarks, threat model
 infrastructure/         Dockerfile, compose
 tests/                  unit and acceptance tests
+dotnet/                 C#/.NET edition (same scenarios, portal and API); see dotnet/README.md
 ```
 
 ## Development
@@ -195,6 +197,7 @@ tests/                  unit and acceptance tests
 make test       # 95 tests, ~40 s
 make lint
 make evaluate   # regenerate docs/benchmarks/RESULTS.md
+dotnet test dotnet/OsIntelligenceLab.sln   # 40 tests for the .NET edition
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/coding-standards.md](docs/coding-standards.md). MIT licensed.
