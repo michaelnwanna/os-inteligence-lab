@@ -41,6 +41,8 @@ public sealed class FleetSimulator
 
     public Scenario Scenario { get; }
     public int Devices => _n;
+    public int CellCount => _ncell;
+    public Rng Rng => _rng;
 
     public FleetSimulator(Scenario scenario, int? devices = null, int? seed = null)
     {

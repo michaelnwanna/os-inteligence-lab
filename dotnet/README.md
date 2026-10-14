@@ -11,6 +11,8 @@ dotnet run --project dotnet/src/Ail.Cli -c Release -- report AIL-1001 --db data/
 dotnet run --project dotnet/src/Ail.Cli -c Release -- ask "regressions affecting ARM64 but not x64" --db data/demo.db
 dotnet run --project dotnet/src/Ail.Cli -c Release -- evaluate --output docs/benchmarks/RESULTS-dotnet.md
 dotnet run --project dotnet/src/Ail.Cli -c Release -- evaluate --heldout    # the fourteen held-out scenarios
+dotnet run --project dotnet/src/Ail.Cli -c Release -- stream --url http://127.0.0.1:8000 --minutes 30   # push simulated events to a server
+dotnet run --project dotnet/src/Ail.Cli -c Release -- agent enroll    # opt-in local agent: signals, enroll, preview, run, revoke
 dotnet test dotnet/OsIntelligenceLab.sln
 ```
 
@@ -26,6 +28,7 @@ repository root if you run the built binary from outside the repository.
 | `src/Ail.Ingestion` | SQLite store, normalisation, aggregation, in-memory stream with backpressure, Prometheus metrics |
 | `src/Ail.Detection` | Five detectors, cohort scan statistic, change correlation, incident builder, series/breakdown analytics, natural-language query |
 | `src/Ail.Investigation` | Evidence builder, grounding validator, offline rules provider, OpenAI-compatible provider, GitHub client, incident archive, commit ranking, time machine, report, benchmark harness |
+| `src/Ail.Agent` | Opt-in local agent (consent store, per-OS collectors, payload builder) and the batching, retrying ingestion client |
 | `src/Ail.Api` | ASP.NET Core minimal API and static portal, optional `AIL_API_TOKEN`, `AIL_READ_TOKEN`, `AIL_RATE_LIMIT` |
 | `src/Ail.Cli` | The `ail` command |
 | `tests/Ail.Tests` | xUnit: all ten scenarios against ground truth, grounding guardrails, schema, ingestion and API (real Kestrel server), history, natural-language query, GitHub client |
@@ -36,11 +39,12 @@ Ported: the full pipeline (simulate, ingest, detect, isolate cohort, correlate, 
 detection with recovery and re-baselining, the grounding validator and rules fallback, the fixture repository and the
 read-only GitHub client (compare, commit files, issue creation), the cross-run incident archive with recurrence matching
 (`ail history`), the natural-language query (`ail ask`, `/api/v1/query`), issue drafting (`ail issue`), the portal API,
-token authentication and rate limiting on the write endpoints, and the benchmark harness.
+token authentication and rate limiting on the write endpoints, the benchmark harness, the local agent (`ail agent`) and
+`ail stream`. The agent reads and writes the same `consent.json` as the Python one.
 
-Not ported (use the Python edition): the opt-in local machine agent and `ail stream`, which sends simulated events to a
-running server through the Python SDK. The GitHub client is covered by mocked-transport tests only; it has not been run
-against the live GitHub API.
+Caveats: the GitHub client is covered by mocked-transport tests only; it has not been run against the live GitHub API.
+The .NET agent was run by hand on macOS only. Its Linux and Windows collectors (including the Windows P/Invoke calls) are
+exercised by the `dotnet-agent` CI job, whose first results are not in yet.
 
 ## Differences from the Python edition
 

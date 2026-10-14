@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Ail.Agent\Ail.Agent.csproj" />
     <ProjectReference Include="..\..\src\Ail.Api\Ail.Api.csproj" />
     <ProjectReference Include="..\..\src\Ail.Simulator\Ail.Simulator.csproj" />
     <ProjectReference Include="..\..\src\Ail.Ingestion\Ail.Ingestion.csproj" />

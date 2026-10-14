@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using Ail.Agent;
 using Ail.Api;
 using Ail.Detection;
 using Ail.Ingestion;
@@ -54,6 +56,9 @@ static class Cli
           serve     [--db PATH] [--host H] [--port P]
           report    INCIDENT_ID [--db PATH]
           issue     INCIDENT_ID [--db PATH] [--repo owner/name --create]
+          stream    [--scenario ID] [--devices N] [--minutes N] [--url URL] [--token T]
+          agent     signals | enroll | preview | run | revoke
+                    [--signals a,b] [--endpoint URL] [--yes] [--once] [--count N] [--interval SECONDS]
           ask       QUESTION... [--db PATH]
           history
           scenarios
@@ -75,6 +80,8 @@ static class Cli
             case "ask": Ask(Opts.Parse(rest)); break;
             case "history": History(); break;
             case "issue": Issue(Opts.Parse(rest, "create")); break;
+            case "stream": StreamCommand(Opts.Parse(rest)); break;
+            case "agent": AgentCommand(Opts.Parse(rest, "yes", "once")); break;
             case "evaluate": Evaluate(Opts.Parse(rest, "heldout")); break;
             default: Console.Error.WriteLine($"unknown command '{args[0]}'\n\n{Usage}"); return 2;
         }
@@ -222,6 +229,74 @@ static class Cli
         }
         var repo = o.Get("repo") ?? throw new CliException("--repo owner/name is required with --create");
         Console.WriteLine(new GitHubRepo(repo).CreateIssue(title, body, new[] { "os-intelligence-lab" }));
+    }
+
+    private static void StreamCommand(Opts o)
+    {
+        var sc = ScenarioLoader.Load(o.Get("scenario", Flagship));
+        var url = o.Get("url", "http://127.0.0.1:8000");
+        var sim = new FleetSimulator(sc, o.Int("devices") ?? 2000);
+        using var client = new IngestionClient(url, o.Get("token"));
+        try
+        {
+            Console.WriteLine(client.SendDeployments(sim.ChangeEvents()));
+            Console.WriteLine(client.SendEvents(EventStream.Events(sim, o.Int("minutes") ?? 30)));
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            throw new CliException($"cannot reach {url} ({e.Message}); start the server first with `ail serve`");
+        }
+    }
+
+    private static void AgentCommand(Opts o)
+    {
+        var action = o.Positional.FirstOrDefault();
+        if (action is not ("signals" or "enroll" or "preview" or "run" or "revoke"))
+            throw new CliException("usage: ail agent signals|enroll|preview|run|revoke");
+        var store = new ConsentStore();
+        if (action == "signals")
+        {
+            foreach (var (name, text) in Collectors.Signals) Console.WriteLine($"{name}: {text}");
+            return;
+        }
+        if (action == "revoke")
+        {
+            Console.WriteLine(store.Revoke() ? "consent revoked and local device id deleted" : "nothing to revoke");
+            return;
+        }
+        if (action == "enroll")
+        {
+            var endpoint = o.Get("endpoint", "http://127.0.0.1:8000");
+            var chosen = (o.Get("signals")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>())
+                .Concat(o.Positional.Skip(1)).ToList();
+            if (chosen.Count == 0) chosen = Collectors.Signals.Keys.ToList();
+            Console.WriteLine($"The agent will send ONLY these signals, to {endpoint}:");
+            foreach (var name in chosen) Console.WriteLine($"  - {name}: {(Collectors.Signals.TryGetValue(name, out var text) ? text : "?")}");
+            Console.WriteLine("Plus coarse machine facts: OS, OS version, architecture, CPU core count, memory size.");
+            Console.WriteLine($"It never collects names, hostnames, files, processes, network data or location. Consent is stored in {store.Dir}.");
+            if (!o.Has("yes"))
+            {
+                Console.Write("Enable these signals? [y/N] ");
+                if (Console.ReadLine()?.Trim().ToLowerInvariant() != "y") throw new CliException("not enrolled");
+            }
+            try { store.Grant(chosen, endpoint); }
+            catch (ArgumentException e) { throw new CliException(e.Message); }
+            Console.WriteLine("enrolled. Run `ail agent preview` to see exactly what would be sent.");
+            return;
+        }
+        var consent = store.Load() ?? throw new CliException("not enrolled: run `ail agent enroll` first (the agent never runs without explicit consent)");
+        if (action == "preview")
+        {
+            Console.WriteLine(IngestionClient.Serialize(AgentRunner.BuildPayload(consent), indented: true));
+            return;
+        }
+        var interval = double.TryParse(o.Get("interval", "60"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0
+            ? s : throw new CliException("--interval must be a positive number of seconds");
+        try { AgentRunner.RunLoop(consent, TimeSpan.FromSeconds(interval), o.Has("once") ? 1 : o.Int("count"), Environment.GetEnvironmentVariable("AIL_API_TOKEN"), Console.WriteLine); }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            throw new CliException($"cannot reach {consent.Endpoint} ({e.Message})");
+        }
     }
 
     private static void Evaluate(Opts o)
