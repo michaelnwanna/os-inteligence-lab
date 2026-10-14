@@ -1,0 +1,33 @@
+id: heldout-01
+name: Small fleet, model-specific regression after an OS update
+description: >
+  20,000 devices with a noisier baseline (0.6% failures). AtlasOS 13.0 rolls out to half the devices and only
+  the Titan-17 model breaks on it.
+seed: 101
+duration_minutes: 150
+population:
+  devices: 20000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+baseline:
+  failure_rate: 0.006
+rollouts:
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 80
+    ramp_minutes: 15
+    max_exposure: 0.5
+effects:
+  - id: fx-titan17
+    where: {device_model: Titan-17, os_version: "13.0"}
+    failure_rate: 0.08
+    signature: "ACCESS_VIOLATION|Render.Draw"
+expected:
+  incidents: 1
+  effect_start_minute: 80
+  cohort: {os_version: "13.0", device_model: Titan-17}
+  trigger: os-13.0-update
+  metric: failure_rate

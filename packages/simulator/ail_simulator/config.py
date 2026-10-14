@@ -168,3 +168,8 @@ def load_scenario(ref: str | Path) -> Scenario:
 
 def list_scenarios() -> list[Scenario]:
     return [load_scenario(p) for p in sorted(scenario_dir().glob("scenario-*.yaml"))]
+
+
+def list_heldout_scenarios() -> list[Scenario]:
+    """Scenarios written after the detector settings were fixed; never used for tuning."""
+    return [load_scenario(p) for p in sorted((scenario_dir() / "heldout").glob("heldout-*.yaml"))]

@@ -1,0 +1,46 @@
+id: heldout-06
+name: Clean run with traffic swings and three benign rollouts
+description: >
+  A traffic dip and a surge, plus driver, app and OS rollouts that change nothing. A moderately noisy
+  baseline. No incident is correct.
+seed: 106
+duration_minutes: 180
+population:
+  devices: 60000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+baseline:
+  failure_rate: 0.008
+  model_spread: 0.25
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 75
+    ramp_minutes: 25
+    max_exposure: 0.5
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 110
+    ramp_minutes: 20
+    max_exposure: 0.3
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 140
+    ramp_minutes: 15
+    max_exposure: 0.3
+traffic:
+  - {start_minute: 70, end_minute: 95, multiplier: 0.4}
+  - {start_minute: 120, end_minute: 135, multiplier: 2.5}
+expected:
+  incidents: 0

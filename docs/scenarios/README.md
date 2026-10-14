@@ -18,3 +18,11 @@ Each file defines a synthetic fleet, staged rollouts, injected regressions and t
 Scenario files are plain YAML validated by `ail_simulator.config.Scenario`. To add one, copy a file, change the `id`, and `ail simulate --scenario path/to/file.yaml`. `failure_rate` in an effect is the target for an *average* device; per-model baseline differences are preserved.
 
 `repos/atlas.json` is the controlled test repository used for code intelligence: seven commits between `v2.0` and `v2.1`, one of which (`3f28a91`) makes `MemoryCache` retain buffers without eviction.
+
+## Held-out scenarios
+
+`heldout/` holds eight further scenarios (different fleet sizes from 5,000 to 100,000 devices, noisier baselines, a mild
+regression, a latency-only cohort, a six-hour run, a rolled-back release and a clean run with traffic swings). They were
+written after the detector settings were fixed and are never used for tuning; run them with `ail evaluate --heldout`.
+Results: [RESULTS-heldout.md](../benchmarks/RESULTS-heldout.md) (Python) and
+[RESULTS-heldout-dotnet.md](../benchmarks/RESULTS-heldout-dotnet.md) (.NET).

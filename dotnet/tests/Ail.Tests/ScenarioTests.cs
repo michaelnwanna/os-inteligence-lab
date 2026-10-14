@@ -11,6 +11,14 @@ public class ScenarioTests
     [Fact]
     public void AllTenScenariosAreAvailable() => Assert.Equal(10, ScenarioLoader.LoadAll().Count);
 
+    [Fact]
+    public void HeldoutScenariosAreSeparateFromTheTunedTen()
+    {
+        var heldout = ScenarioLoader.LoadHeldout();
+        Assert.Equal(8, heldout.Count);
+        Assert.DoesNotContain(heldout, h => ScenarioLoader.LoadAll().Any(s => s.Id == h.Id));
+    }
+
     [Theory]
     [MemberData(nameof(ScenarioIds))]
     public void ScenarioMeetsGroundTruth(string id)

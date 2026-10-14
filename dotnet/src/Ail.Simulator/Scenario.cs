@@ -174,6 +174,11 @@ public static class ScenarioLoader
         return Yaml.Deserialize<Scenario>(File.ReadAllText(path));
     }
 
+    /// <summary>Scenarios written after the detector settings were fixed; never used for tuning.</summary>
+    public static List<Scenario> LoadHeldout() =>
+        Directory.GetFiles(Path.Combine(ScenarioDir(), "heldout"), "heldout-*.yaml").OrderBy(p => p)
+            .Select(p => Yaml.Deserialize<Scenario>(File.ReadAllText(p))).ToList();
+
     public static List<Scenario> LoadAll() =>
         Directory.GetFiles(ScenarioDir(), "scenario-*.yaml").OrderBy(p => p).Select(p => Yaml.Deserialize<Scenario>(File.ReadAllText(p))).ToList();
 }

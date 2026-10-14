@@ -54,7 +54,7 @@ static class Cli
           serve     [--db PATH] [--host H] [--port P]
           report    INCIDENT_ID [--db PATH]
           scenarios
-          evaluate  [--devices N] [--seeds N] [--output FILE]
+          evaluate  [--devices N] [--seeds N] [--heldout] [--output FILE]
         """;
 
     public static int Run(string[] args)
@@ -69,7 +69,7 @@ static class Cli
             case "serve": Serve(Opts.Parse(rest)); break;
             case "demo": Demo(Opts.Parse(rest, "serve")); break;
             case "report": Report(Opts.Parse(rest)); break;
-            case "evaluate": Evaluate(Opts.Parse(rest)); break;
+            case "evaluate": Evaluate(Opts.Parse(rest, "heldout")); break;
             default: Console.Error.WriteLine($"unknown command '{args[0]}'\n\n{Usage}"); return 2;
         }
         return 0;
@@ -180,7 +180,8 @@ static class Cli
 
     private static void Evaluate(Opts o)
     {
-        var text = Evaluation.Evaluate(o.Int("devices") ?? 50_000, o.Int("seeds") ?? 3, Console.Error.WriteLine);
+        var heldout = o.Has("heldout");
+        var text = Evaluation.Evaluate(o.Int("devices") ?? (heldout ? null : 50_000), o.Int("seeds") ?? 3, Console.Error.WriteLine, heldout);
         if (o.Get("output") is { } path) { File.WriteAllText(path, text); Console.WriteLine($"wrote {path}"); }
         else Console.WriteLine(text);
     }

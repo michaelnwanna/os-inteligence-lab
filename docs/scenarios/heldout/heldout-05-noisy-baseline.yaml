@@ -1,0 +1,35 @@
+id: heldout-05
+name: Noisy baseline
+description: >
+  A baseline failure rate of 1.5% with large differences between device models and wide latency and memory
+  spread. An ARM64 + App 2.1 regression (8x) has to stand out of the noise.
+seed: 105
+duration_minutes: 180
+population:
+  devices: 100000
+baseline:
+  failure_rate: 0.015
+  model_spread: 0.4
+  latency_ms: {mean: 260, std: 130}
+  memory_mb: {mean: 430, std: 140}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 15
+    max_exposure: 0.3
+effects:
+  - id: fx-arm64
+    where: {architecture: arm64, application_version: "2.1"}
+    failure_rate: 0.12
+    signature: "OOM_KILL|MemoryCache.Allocate"
+expected:
+  incidents: 1
+  effect_start_minute: 100
+  cohort: {architecture: arm64, application_version: "2.1"}
+  trigger: dep-app-2.1
+  metric: failure_rate

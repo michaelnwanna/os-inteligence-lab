@@ -1,0 +1,28 @@
+id: heldout-04
+name: Latency-only regression in a two-dimension cohort
+description: >
+  Driver 7.14 slows x64 devices by 1.6x. Failures do not change, so only the latency metric shows it.
+seed: 104
+duration_minutes: 180
+population:
+  devices: 100000
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 95
+    ramp_minutes: 10
+    max_exposure: 0.35
+effects:
+  - id: fx-x64-latency
+    where: {architecture: x64, driver_version: "7.14"}
+    latency_multiplier: 1.6
+expected:
+  incidents: 1
+  effect_start_minute: 95
+  cohort: {architecture: x64, driver_version: "7.14"}
+  trigger: drv-7.14
+  metric: latency_ms

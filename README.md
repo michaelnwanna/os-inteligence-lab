@@ -102,7 +102,7 @@ From `ail evaluate` (10 scenarios x 3 seeds, 50,000 devices each, 30 injected re
 | Agent reports passing grounding validation | 30 of 30 |
 | Injected commit ranked first | 6 of 6 |
 
-These are results on *synthetic* scenarios designed by the authors, and the detector thresholds were tuned while developing against them (an earlier version missed one cohort, which led to the `expectation_margin` setting). Six clean runs are too few to estimate a false-alarm rate; 40 more seeds of the clean scenario gave one false incident, so expect roughly 1 in 40 to 1 in 20. Treat them as proof that the engine does what it claims, not as a forecast of accuracy on your fleet; held-out scenarios and real telemetry are the real test.
+These are results on *synthetic* scenarios designed by the authors, and the detector thresholds were tuned while developing against them (an earlier version missed one cohort, which led to the `expectation_margin` setting). On eight held-out scenarios written after the settings were fixed (`ail evaluate --heldout`, [results](docs/benchmarks/RESULTS-heldout.md)), precision and recall were 1.00, cohort and trigger were right 21 of 21 times, and detection latency was a median of 7 and a maximum of 16 minutes, slower than on the tuned ten because the held-out fleets are smaller and the effects milder. The same author wrote them, and only 3 of the 24 runs are clean, so they are a second look, not independent validation. Six clean runs are too few to estimate a false-alarm rate; 40 more seeds of the clean scenario gave one false incident, so expect roughly 1 in 40 to 1 in 20. Treat them as proof that the engine does what it claims, not as a forecast of accuracy on your fleet; held-out scenarios and real telemetry are the real test.
 
 ## Principles
 
@@ -165,7 +165,7 @@ Ordered by value for the least effort. Already done: CI matrix for the agent on 
 1. **Run the agent on physical Linux and Windows machines**, pointing it at a server on your network. CI shows the collectors work on those operating systems; it does not show the agent talking to a remote backend, and virtual machines hide things like laptop power states.
 2. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
 3. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
-4. **Add held-out scenarios.** The thresholds were tuned against the current ten scenarios. Write a new batch (different populations, effect sizes, durations, noisy baselines) without touching the detector settings and report those numbers separately.
+4. **Harder held-out scenarios.** The first eight held-out scenarios (done) were all handled, so they were not hard enough to find a weakness. Write adversarial ones: overlapping cohorts of different sizes, a regression present from the start, seasonal traffic, and many more clean runs to measure the false-alarm rate properly.
 5. **Handle a regression present from the start.** Re-baselining solves recurrence, but a baseline that already contains the problem hides it. Compare against peer cohorts or a previous release's baseline, and add a seasonal (daily/weekly) baseline for long-running fleets. This also unlocks forecast-based detection and anomaly clustering from Phase 9.
 6. **Finish Phase 6.** GitHub App or OAuth instead of a personal token, a repository picker in the portal, and LLM-assisted reading of the top candidate diffs (still validated against the evidence).
 7. **Harden further.** Dependency pinning with hashes, authentication that is not a shared token (per-user, scoped), trusted-proxy handling for the rate limiter's client address, and an external review of the agent.
@@ -194,10 +194,10 @@ dotnet/                 C#/.NET edition (same scenarios, portal and API); see do
 ## Development
 
 ```bash
-make test       # 95 tests, ~40 s
+make test       # 96 tests, ~40 s
 make lint
 make evaluate   # regenerate docs/benchmarks/RESULTS.md
-dotnet test dotnet/OsIntelligenceLab.sln   # 40 tests for the .NET edition
+dotnet test dotnet/OsIntelligenceLab.sln   # 41 tests for the .NET edition
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/coding-standards.md](docs/coding-standards.md). MIT licensed.

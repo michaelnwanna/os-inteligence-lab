@@ -9,6 +9,7 @@ dotnet run --project dotnet/src/Ail.Cli -c Release -- demo --serve     # simulat
 dotnet run --project dotnet/src/Ail.Cli -c Release -- scenarios
 dotnet run --project dotnet/src/Ail.Cli -c Release -- report AIL-1001 --db data/demo.db
 dotnet run --project dotnet/src/Ail.Cli -c Release -- evaluate --output docs/benchmarks/RESULTS-dotnet.md
+dotnet run --project dotnet/src/Ail.Cli -c Release -- evaluate --heldout    # the eight held-out scenarios
 dotnet test dotnet/OsIntelligenceLab.sln
 ```
 

@@ -210,7 +210,8 @@ def cmd_agent(a: argparse.Namespace) -> None:
 def cmd_evaluate(a: argparse.Namespace) -> None:
     from ail_cli.evaluate import evaluate
 
-    report = evaluate(a.devices, a.seeds)
+    devices = a.devices or (None if a.heldout else 50_000)
+    report = evaluate(devices, a.seeds, heldout=a.heldout)
     print(report)
     if a.output:
         out = Path(a.output)
@@ -293,8 +294,9 @@ def main(argv: list[str] | None = None) -> None:
     s.set_defaults(fn=cmd_scenarios)
 
     s = sub.add_parser("evaluate", help="score detection quality against scenario ground truth")
-    s.add_argument("--devices", type=int, default=50_000)
+    s.add_argument("--devices", type=int, help="fleet size (default 50,000; with --heldout each scenario's own)")
     s.add_argument("--seeds", type=int, default=3)
+    s.add_argument("--heldout", action="store_true", help="score the held-out scenarios instead of the tuned ten")
     s.add_argument("--output")
     s.set_defaults(fn=cmd_evaluate)
 
