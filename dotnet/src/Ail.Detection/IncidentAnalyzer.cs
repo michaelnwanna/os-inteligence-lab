@@ -158,7 +158,8 @@ public static class IncidentAnalyzer
         else
         {
             seedMask = seeded![pick].Mask;
-            onset = Math.Min(detected, scanner.Onset(seedMask, last));
+            onset = scanner.Onset(seedMask, last); // its own change point, which may be long after the first alarm
+            detected = Math.Max(detected, onset);
         }
 
         var recovered = RecoveryIndex(scanner, seedMask, detected, last, cfg);
@@ -174,7 +175,7 @@ public static class IncidentAnalyzer
         var mask = findings.Count > 0 ? findings[idx].Mask : null;
         var others = new bool[cube.C];
         for (var i = 0; i < findings.Count; i++)
-            if (i != idx) for (var c = 0; c < cube.C; c++) others[c] |= findings[i].Mask[c];
+            if (i != idx) { var other = cube.Mask(findings[i].Finding.Dimensions); for (var c = 0; c < cube.C; c++) others[c] |= other[c]; } // every device in another cohort, including shared ones
         var cohorts = findings.Count > 0 ? new[] { findings[idx].Finding }.Concat(findings.Where((_, i) => i != idx).Select(f => f.Finding)).ToList() : new List<CohortFinding>();
         var focus = cohorts.FirstOrDefault();
         var dims = focus?.Dimensions ?? new Dictionary<string, string>();

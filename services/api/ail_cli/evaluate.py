@@ -119,7 +119,7 @@ def evaluate(devices: int | None = 50_000, seeds: int = 3, progress=print, heldo
 
     title = "# Held-out benchmark results" if heldout else "# Benchmark results"
     fleet = f"{devices:,} simulated devices each" if devices else "each scenario's own fleet size"
-    kind = (" Held-out scenarios were written after the detector settings were fixed and were never used for tuning."
+    kind = (" Held-out scenarios were written after the detector settings were fixed; 09 and 15 to 20 were later used to develop the overlap fix and are development data."
             if heldout else "")
     out = [
         title,

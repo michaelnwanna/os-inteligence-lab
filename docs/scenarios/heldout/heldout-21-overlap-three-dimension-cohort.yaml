@@ -1,0 +1,47 @@
+id: heldout-21
+name: A three-dimension cohort, then a broad overlapping one
+description: >
+  arm64 + App 2.1 + OS 12.4 (a thin slice) breaks at minute 100. At minute 125 driver 7.14 alone breaks for every
+  device that has it, including the thin slice.
+seed: 121
+duration_minutes: 200
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.6
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 125
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-thin
+    where: {architecture: arm64, application_version: "2.1", os_version: "12.4"}
+    failure_rate: 0.15
+  - id: fx-driver
+    where: {driver_version: "7.14"}
+    failure_rate: 0.03
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {architecture: arm64, application_version: "2.1", os_version: "12.4"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 125
+      cohort: {driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate

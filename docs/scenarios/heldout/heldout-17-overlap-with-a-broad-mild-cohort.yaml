@@ -1,0 +1,46 @@
+id: heldout-17
+name: A broad mild regression overlapped by a narrow severe one
+description: >
+  App 2.1 is slightly worse everywhere from minute 100 (0.4% to 0.9%). At minute 130 x64 + driver 7.14 breaks
+  badly. Some x64 devices on driver 7.14 also run app 2.1.
+seed: 117
+duration_minutes: 200
+population:
+  devices: 100000
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 15
+    max_exposure: 0.4
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 130
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-app
+    where: {application_version: "2.1"}
+    failure_rate: 0.009
+  - id: fx-x64-driver
+    where: {architecture: x64, driver_version: "7.14"}
+    failure_rate: 0.07
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {application_version: "2.1"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 130
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate

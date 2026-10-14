@@ -75,6 +75,7 @@ class CohortScanner:
         E = nw * self.level
         total_n = float(N.sum())
         total_excess = float((O - E).sum())
+        O_all, E_all = O.copy(), E.copy()
         claimed = np.zeros(cube.C, dtype=bool) if exclude is None else exclude.copy()
         N[claimed] = O[claimed] = E[claimed] = 0.0
         full_masks: list[np.ndarray] = []
@@ -140,8 +141,14 @@ class CohortScanner:
                         others |= m
                 again = self.scan(i0, i1, top_k=1, exclude=others, refine=False)
                 if again:
-                    out[i] = (again[0][0].model_copy(update={"rank": out[i][0].rank}), again[0][1])
-                    full_masks[i] = again[0][1]
+                    dims_i = again[0][0].dimensions
+                    full_i = cube.mask(dims_i)  # all its cells, not just the unclaimed ones
+                    # overlapping cohorts each get credit for the excess on their shared devices
+                    share = (float(np.clip((O_all[full_i].sum() - E_all[full_i].sum()) / total_excess, 0.0, 1.0))
+                             if total_excess > 0 else 0.0)
+                    out[i] = (again[0][0].model_copy(update={"rank": out[i][0].rank, "excess_share": share}),
+                              again[0][1])
+                    full_masks[i] = full_i
         return out
 
     def evaluate(self, mask: np.ndarray, i0: int, i1: int) -> dict[str, float]:

@@ -1,0 +1,50 @@
+id: heldout-25
+name: Overlapping regressions on a noisy baseline
+description: >
+  A 1.2% baseline with large model differences. x64 + driver 7.14 breaks at minute 95 and App 2.1 + OS 12.5 at
+  minute 120.
+seed: 125
+duration_minutes: 200
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+baseline:
+  failure_rate: 0.012
+  model_spread: 0.35
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 95
+    ramp_minutes: 10
+    max_exposure: 0.5
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 120
+    ramp_minutes: 10
+    max_exposure: 0.5
+effects:
+  - id: fx-x64-driver
+    where: {architecture: x64, driver_version: "7.14"}
+    failure_rate: 0.09
+  - id: fx-app-os
+    where: {application_version: "2.1", os_version: "12.5"}
+    failure_rate: 0.12
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 95
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate
+    - effect_start_minute: 120
+      cohort: {application_version: "2.1", os_version: "12.5"}
+      trigger: dep-app-2.1
+      metric: failure_rate

@@ -1,0 +1,63 @@
+id: heldout-22
+name: Three regressions twenty minutes apart on overlapping cohorts
+description: >
+  x64 + driver 7.14 at minute 90, App 2.1 + OS 12.4 at minute 110, and arm64 + OS 12.5 at minute 130. The first
+  two overlap; the third overlaps neither on OS but shares devices with the second through the app version.
+seed: 122
+duration_minutes: 220
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 90
+    ramp_minutes: 10
+    max_exposure: 0.4
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 110
+    ramp_minutes: 10
+    max_exposure: 0.4
+  - id: os-13.0-update
+    kind: os_update
+    component: AtlasOS
+    dimension: os_version
+    from_version: "12.5"
+    to_version: "13.0"
+    at_minute: 130
+    ramp_minutes: 10
+    max_exposure: 0.5
+effects:
+  - id: fx-x64-driver
+    where: {architecture: x64, driver_version: "7.14"}
+    failure_rate: 0.05
+  - id: fx-app-os
+    where: {application_version: "2.1", os_version: "12.4"}
+    failure_rate: 0.07
+  - id: fx-arm64-os13
+    where: {architecture: arm64, os_version: "13.0"}
+    failure_rate: 0.09
+expected:
+  incidents: 3
+  episodes:
+    - effect_start_minute: 90
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate
+    - effect_start_minute: 110
+      cohort: {application_version: "2.1", os_version: "12.4"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 130
+      cohort: {architecture: arm64, os_version: "13.0"}
+      trigger: os-13.0-update
+      metric: failure_rate

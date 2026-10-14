@@ -1,0 +1,49 @@
+id: heldout-26
+name: Overlapping regressions where the first is rolled back
+description: >
+  x64 + driver 7.14 breaks at minute 100 and the driver is rolled back at minute 150. App 2.1 + OS 12.4 breaks at
+  minute 115 and stays broken. The first incident should resolve; the second should not.
+seed: 126
+duration_minutes: 240
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.4
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 115
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-x64-driver
+    where: {architecture: x64, driver_version: "7.14"}
+    start_minute: 100
+    end_minute: 150
+    failure_rate: 0.06
+  - id: fx-app-os
+    where: {application_version: "2.1", os_version: "12.4"}
+    failure_rate: 0.07
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate
+    - effect_start_minute: 115
+      cohort: {application_version: "2.1", os_version: "12.4"}
+      trigger: dep-app-2.1
+      metric: failure_rate

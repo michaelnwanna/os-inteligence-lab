@@ -1,0 +1,39 @@
+id: heldout-20
+name: Control, one regression with a benign overlapping rollout
+description: >
+  Only App 2.1 + OS 12.4 breaks. A driver rollout that changes nothing overlaps the same devices. The engine
+  must not split this into two incidents.
+seed: 120
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+rollouts:
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 90
+    ramp_minutes: 20
+    max_exposure: 0.5
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 110
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-app-os
+    where: {application_version: "2.1", os_version: "12.4"}
+    failure_rate: 0.07
+expected:
+  incidents: 1
+  effect_start_minute: 110
+  cohort: {application_version: "2.1", os_version: "12.4"}
+  trigger: dep-app-2.1
+  metric: failure_rate

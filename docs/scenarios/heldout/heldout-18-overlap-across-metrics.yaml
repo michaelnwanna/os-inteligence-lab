@@ -1,0 +1,47 @@
+id: heldout-18
+name: Overlapping cohorts on different metrics
+description: >
+  App 2.1 + OS 12.4 raises failures at minute 100. x64 + driver 7.14 becomes slower at minute 115. The cohorts
+  overlap on devices that have both changes. Two incidents, one per metric.
+seed: 118
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.4
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 115
+    ramp_minutes: 10
+    max_exposure: 0.4
+effects:
+  - id: fx-app-os
+    where: {application_version: "2.1", os_version: "12.4"}
+    failure_rate: 0.06
+  - id: fx-x64-latency
+    where: {architecture: x64, driver_version: "7.14"}
+    latency_multiplier: 1.7
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {application_version: "2.1", os_version: "12.4"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 115
+      cohort: {architecture: x64, driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: latency_ms

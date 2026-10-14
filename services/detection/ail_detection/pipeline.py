@@ -151,7 +151,8 @@ def _build_incident(ws: Workspace, group: list[_Cluster], changes: list[ChangeEv
         seed_mask = cube.mask(alarm_dims) if alarm_dims else np.ones(cube.C, dtype=bool)
     else:
         _, seed_mask = seeded[pick]
-        onset = min(detected, scanner.onset(seed_mask, last))
+        onset = scanner.onset(seed_mask, last)  # its own change point, which may be long after the first alarm
+        detected = max(detected, onset)
 
     recovered = _recovery_index(scanner, seed_mask, detected, last, cfg)
     end = recovered - 1 if recovered is not None else last
@@ -165,9 +166,9 @@ def _build_incident(ws: Workspace, group: list[_Cluster], changes: list[ChangeEv
             return None
     mask = findings[idx][1] if findings else None
     others = np.zeros(cube.C, dtype=bool)
-    for i, (_, m) in enumerate(findings):
+    for i, (f, _) in enumerate(findings):
         if i != idx:
-            others |= m
+            others |= cube.mask(f.dimensions)  # every device in another cohort, including shared ones
     cohorts = [findings[idx][0]] + [f for i, (f, _) in enumerate(findings) if i != idx] if findings else []
     dims = cohorts[0].dimensions if cohorts else {}
     focus = cohorts[0] if cohorts else None

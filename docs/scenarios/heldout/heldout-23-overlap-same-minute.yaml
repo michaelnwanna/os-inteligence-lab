@@ -1,0 +1,47 @@
+id: heldout-23
+name: Two overlapping regressions starting in the same minute
+description: >
+  x86 + App 2.1 and OS 12.4 + driver 7.14 both break at minute 100. Some x86 devices on OS 12.4 have both changes.
+seed: 123
+duration_minutes: 180
+population:
+  devices: 100000
+  os_versions: {"12.4": 0.5, "12.5": 0.5}
+  architectures: {x64: 0.5, arm64: 0.2, x86: 0.3}
+rollouts:
+  - id: dep-app-2.1
+    kind: app_deployment
+    component: Atlas
+    dimension: application_version
+    from_version: "2.0"
+    to_version: "2.1"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.5
+  - id: drv-7.14
+    kind: driver_update
+    component: gfx-driver
+    dimension: driver_version
+    from_version: "7.13"
+    to_version: "7.14"
+    at_minute: 100
+    ramp_minutes: 10
+    max_exposure: 0.5
+effects:
+  - id: fx-x86-app
+    where: {architecture: x86, application_version: "2.1"}
+    failure_rate: 0.08
+  - id: fx-os-driver
+    where: {os_version: "12.4", driver_version: "7.14"}
+    failure_rate: 0.06
+expected:
+  incidents: 2
+  episodes:
+    - effect_start_minute: 100
+      cohort: {architecture: x86, application_version: "2.1"}
+      trigger: dep-app-2.1
+      metric: failure_rate
+    - effect_start_minute: 100
+      cohort: {os_version: "12.4", driver_version: "7.14"}
+      trigger: drv-7.14
+      metric: failure_rate

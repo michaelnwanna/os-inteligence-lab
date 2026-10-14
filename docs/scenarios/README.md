@@ -21,13 +21,18 @@ Scenario files are plain YAML validated by `ail_simulator.config.Scenario`. To a
 
 ## Held-out scenarios
 
-`heldout/` holds fourteen further scenarios that were written after the detector settings were fixed and are never used for
-tuning; run them with `ail evaluate --heldout` (add `--scenario heldout-13 --seeds 50` to measure the false-alarm rate on the
-clean reference run). 01 to 08: different fleet sizes (5,000 to 100,000 devices), noisier baselines, a mild regression, a
-latency-only cohort, a six-hour run, a rolled-back release, a clean run with traffic swings. 09 to 14 are adversarial:
-overlapping cohorts twenty minutes apart, a chronic problem already in the baseline, a regression at a traffic peak, a slow
-drift over two hours, a clean reference run, and a failure regression together with a latency regression.
+`heldout/` holds twenty-six further scenarios that were written after the detector settings were fixed; run them with
+`ail evaluate --heldout` (add `--scenario heldout-13 --seeds 50` to measure the false-alarm rate on the clean reference run).
+
+- 01 to 08: different fleet sizes (5,000 to 100,000 devices), noisier baselines, a mild regression, a latency-only cohort, a
+  six-hour run, a rolled-back release, a clean run with traffic swings.
+- 09 to 14: adversarial: overlapping cohorts twenty minutes apart, a chronic problem already in the baseline, a regression at a
+  traffic peak, a slow drift over two hours, a clean reference run, a failure regression together with a latency regression.
+- 15 to 20: more overlapping-cohort cases. `heldout-09` exposed a weakness in how overlapping cohorts are grouped; 09 and 15 to 20
+  were then used to develop the fix, so they are development data, not held out.
+- 21 to 26: written before the fix was evaluated and scored once: a three-dimension cohort overlapped by a broad one, three
+  overlapping regressions, two starting in the same minute, two latency regressions, a noisy baseline, and a rolled-back first
+  regression.
 
 Results: [RESULTS-heldout.md](../benchmarks/RESULTS-heldout.md) (Python) and
-[RESULTS-heldout-dotnet.md](../benchmarks/RESULTS-heldout-dotnet.md) (.NET). The Python edition fails `heldout-09` on seed 109
-(known, not fixed: changing the grouping rules after seeing this result would make the scenario part of the tuning set).
+[RESULTS-heldout-dotnet.md](../benchmarks/RESULTS-heldout-dotnet.md) (.NET).

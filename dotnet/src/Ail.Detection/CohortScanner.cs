@@ -106,6 +106,7 @@ public sealed class CohortScanner
         for (var c = 0; c < C; c++) E[c] = nw[c] * Level[c];
         var totalN = N.Sum();
         var totalExcess = O.Sum() - E.Sum();
+        var oAll = (double[])O.Clone(); var eAll = (double[])E.Clone();
         var claimed = exclude is null ? new bool[C] : (bool[])exclude.Clone();
         for (var c = 0; c < C; c++) if (claimed[c]) N[c] = O[c] = E[c] = 0;
         var fullMasks = new List<bool[]>();
@@ -181,8 +182,13 @@ public sealed class CohortScanner
                 var again = Scan(i0, i1, 1, others, refine: false);
                 if (again.Count == 0) continue;
                 again[0].Finding.Rank = output[i].Item1.Rank;
+                var fullI = cube.Mask(again[0].Finding.Dimensions); // all its cells, not just the unclaimed ones
+                // overlapping cohorts each get credit for the excess on their shared devices
+                double excessI = 0;
+                for (var c = 0; c < C; c++) if (fullI[c]) excessI += oAll[c] - eAll[c];
+                again[0].Finding.ExcessShare = totalExcess > 0 ? Math.Clamp(excessI / totalExcess, 0.0, 1.0) : 0.0;
                 output[i] = again[0];
-                fullMasks[i] = again[0].Mask;
+                fullMasks[i] = fullI;
             }
         }
         return output;
