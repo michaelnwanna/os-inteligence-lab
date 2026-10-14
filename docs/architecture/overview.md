@@ -7,9 +7,11 @@ flowchart LR
     subgraph Sources
       SIM[Simulator]
       DEV[Devices via SDK]
+      AGT0[Local agent, opt-in]
     end
     SIM -->|aggregates or events| ING
     DEV --> ING[Ingestion API]
+    AGT0 --> ING
     ING --> STR[Event stream]
     STR --> PRO[Processing]
     PRO --> RAW[(events)]
@@ -21,9 +23,13 @@ flowchart LR
     INC --> COR[Correlation]
     CHG[(changes)] --> COR
     COR --> AGT[Investigation agent]
+    HIS[(Incident archive)] --> AGT
     GH[Repo provider] --> AGT
     AGT --> RPT[Incident + report]
+    AGT --> HIS
     RPT --> API[HTTP API]
+    AGG --> NLQ[Natural-language query]
+    NLQ --> API
     API --> UI[Portal]
 ```
 
@@ -42,7 +48,9 @@ Raw events are stored as well when they arrive through the API (de-duplicated by
 3. **Cohort scan** runs every minute on a trailing window and alerts when the same significant cohort tops the scan on consecutive minutes.
 4. **Incident builder** groups results by metric and by onset/cohort compatibility, then applies a practical-significance gate (statistical significance alone is not enough).
 5. **Correlation** scores every recorded change.
-6. **Investigation** builds evidence, asks the LLM provider for hypotheses, validates them and assembles the report and Failure Time Machine data.
+6. **Investigation** recalls similar earlier incidents from the archive, builds evidence, asks the LLM provider for hypotheses, validates them and assembles the report and Failure Time Machine data. The incident is then added to the archive (`AIL_ARCHIVE`, default `data/archive.db`).
+
+Separately, `GET /api/v1/query?q=...` answers plain-English questions with the same cohort statistics, and the opt-in [local agent](local-agent.md) feeds real-machine signals through the normal ingestion path.
 
 Details and the reasoning behind each choice are in [detection-methods.md](detection-methods.md).
 
@@ -55,6 +63,7 @@ Details and the reasoning behind each choice are in [detection-methods.md](detec
 | Detector | `Detector.detect(ctx)` | five built-ins | drop in a class, add it to the list |
 | LLM | `LLMProvider.complete` | rules, OpenAI-compatible, Azure | any |
 | Repo | `RepoProvider.compare` | fixture, GitHub REST | GitLab, local git |
+| Incident archive | `IncidentArchive` | SQLite file | shared database |
 
 ## Observability of the platform itself
 
@@ -74,3 +83,7 @@ Details and the reasoning behind each choice are in [detection-methods.md](detec
 - One anomaly episode per metric per run (a second, later episode on the same metric is not separated).
 - Baseline is a fixed warm-up window, so a regression present from the start is invisible to the baseline-based detectors.
 - Single-node SQLite; the 100K+ events/s target needs the streaming and columnar-store work in the roadmap.
+- Incident ids are per analysis run (`AIL-1001` restarts each time), so recalled incidents are cited with their onset time.
+- Read endpoints are unauthenticated by default; only writes accept the bearer token.
+- The natural-language parser is rule based: it understands metric, window, and include/exclude cohorts, not arbitrary questions.
+- The local agent is verified on macOS only.

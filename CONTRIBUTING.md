@@ -21,6 +21,7 @@ make lint
 - **A detector.** Subclass `Detector`, add it to `DEFAULT_DETECTORS`, add a unit test (fires on a step, silent on stationary data, causal).
 - **An LLM provider.** Implement `LLMProvider.complete`; the guardrails already apply. Test with `httpx.MockTransport`.
 - **A repository provider.** Implement `RepoProvider.compare`.
+- **An agent collector or OS.** Add a signal only after documenting it in `SIGNALS`, `docs/architecture/local-agent.md` and the threat model; test the parser with fixture text. Running the agent on Linux or Windows and reporting results is especially valuable.
 - **A storage backend.** Implement the `TelemetryStore` methods.
 
 ## Rules of the road

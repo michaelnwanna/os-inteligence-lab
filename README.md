@@ -136,6 +136,8 @@ client.send_events([{"timestamp": "2026-03-10T12:00:30Z", "device_id": "d-1", "s
 
 `ail stream --devices 2000 --minutes 30` pushes simulated events through the SDK into a running server, and `POST /api/v1/analyze` runs detection on whatever has been ingested. The telemetry schema is in [docs/architecture/telemetry-schema.md](docs/architecture/telemetry-schema.md).
 
+To send real signals from your own machine, use the opt-in agent (`ail agent enroll`, `preview`, `run`, `revoke`); see [docs/architecture/local-agent.md](docs/architecture/local-agent.md). To ask questions in plain English: `ail ask "regressions in the last 7 days affecting ARM64 but not x64"`.
+
 ## Roadmap status
 
 | Phase | Status | Notes |
@@ -153,6 +155,23 @@ client.send_events([{"timestamp": "2026-03-10T12:00:30Z", "device_id": "d-1", "s
 
 Deliberate deviations from the suggested stack are recorded in [docs/adr](docs/adr): SQLite instead of PostgreSQL/Redis for the first cut, an in-memory stream instead of Redis Streams, and a dependency-free portal instead of Next.js.
 
+## Recommended next steps
+
+Ordered by value for the least effort. Items 1 to 4 close gaps in claims made above.
+
+1. **Prove Phase 8 on a second OS.** Add a CI matrix job that runs `ail agent enroll --yes`, `preview` and a short `run` against a local server on `ubuntu`, `windows` and `macos` runners, then run the agent on a real Linux or Windows machine. Until then the Linux and Windows collectors are fixture-tested only.
+2. **Run CI and the Docker build on GitHub.** The workflow and Dockerfile exist but have not run. Fix whatever breaks, then add a build badge.
+3. **Exercise a real LLM.** Point `AIL_LLM_PROVIDER` at a live model, run `ail evaluate` with it, and record how often the guardrails reject or the fallback triggers. That turns the "grounded" claim from tested-with-mocks into measured.
+4. **Record the demo.** A short capture of the Failure Time Machine plus two screenshots at the top of this README. The project is built to be shown.
+5. **Finish Phase 6.** GitHub App or OAuth instead of a personal token, a repository picker in the portal, and LLM-assisted reading of the top candidate diffs (still validated against the evidence).
+6. **Remove the fixed-baseline limit.** Add an adaptive (rolling or seasonal) baseline so a regression present from the start, a second episode on the same metric, and long-running fleets are handled. This is the most important detection gap; it also unlocks forecast-based detection and anomaly clustering from Phase 9.
+7. **Tighten the one cohort miss.** The benchmark's single wrong cohort (a global regression on one seed) suggests the global-versus-cohort test needs a stricter threshold or an explicit "broad regression" check. Add more scenarios: overlapping regressions, two simultaneous deployments, a regression present from the start.
+8. **Harden for exposure beyond localhost.** Authentication on read endpoints, per-client rate limiting, `pip-audit` and secret scanning in CI, dependency pinning.
+9. **Scale the backend.** Implement `TelemetryStore` for PostgreSQL or ClickHouse and `EventStream` for Redis Streams, add an HTTP-level load test, and publish a benchmark for the 10 million stored events target.
+10. **Portal quality.** Browser tests (Playwright) for the five views and the time machine, an accessibility pass, and a decision on whether to move to a framework (ADR 0005 describes the trigger).
+
+The rest of Phase 9 (detector ensembles, dependency intelligence, automated experiment generation) is best tackled after item 6.
+
 ## Repository layout
 
 ```
@@ -163,6 +182,7 @@ services/investigation/ evidence, agent, LLM providers, GitHub, time machine
 services/api/           combined HTTP API (ail_api) and CLI (ail_cli)
 packages/schemas/       telemetry + result models, JSON Schemas
 packages/sdk/           Python ingestion client
+packages/agent/         opt-in local telemetry agent (ail agent)
 packages/simulator/     synthetic fleet simulator
 docs/                   PRD, architecture, ADRs, scenarios, benchmarks, threat model
 infrastructure/         Dockerfile, compose

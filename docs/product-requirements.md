@@ -62,6 +62,8 @@ Reliability engineer, developer checking a deployment, data/ML engineer experime
 | 8 | Two operating systems send privacy-safe telemetry into the same schema | Agent built and run on macOS; Linux and Windows collectors are tested on fixture data only. Not yet demonstrated on two real systems. See [local-agent.md](architecture/local-agent.md). |
 | 9 | Recurring-regression detection, clustering, signature similarity, history retrieval, ensembles, adaptive baselines, forecasting, dependency intelligence, natural-language query, experiment generation | Done: recurrence detection, signature similarity, history retrieval, natural-language query. Not started: clustering, ensembles, adaptive baselines, forecasting, dependency intelligence, experiment generation. |
 
+Prioritised next steps are in the [README](../README.md#recommended-next-steps).
+
 ## 7. Test strategy
 
 The simulator is the test foundation. Scenarios 001 to 008 (no regression, global crash, ARM64-only, driver-specific, performance degradation, deployment-correlated, false-positive trap, gradual degradation) each declare an expected outcome; see [scenarios](scenarios/README.md). Tracked metrics: precision, recall, F1, detection latency, false-positive rate, cohort accuracy, correlation ranking accuracy, agent grounding and ingestion throughput.

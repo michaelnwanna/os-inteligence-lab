@@ -36,6 +36,10 @@ Event types:
 
 `dimension` + `to_version` is what lets the correlation engine work out which cohort cells a change touched. Changes without a dimension (feature flags, infrastructure) are treated as touching the whole population.
 
+## Events from the local agent
+
+The [local agent](local-agent.md) uses `application = "ail-agent"`, `device_model = "generic-<arch>"`, and sends `session` heartbeats plus `metric` events named `cpu_load_pct` and `memory_mb`. They go through the same endpoints and cohort cube as simulated data; `cpu_load_pct` is stored but not yet monitored by the detectors (the default monitored metrics are `failure_rate`, `latency_ms`, `memory_mb`).
+
 ## Endpoints
 
 | Endpoint | Body | Response |

@@ -41,6 +41,14 @@ For every recorded change: `temporal = exp(-max(onset - change_time, 0) / 60 min
 
 A threshold on the fleet-wide failure rate misses the flagship regression (0.38% to 0.67%) until it is far too late, and fires on traffic surges that change volume but not the rate. Working on rates with per-cell expectations, dispersion adjustment, persistence and cohort scans addresses both.
 
+## Incident memory and recurrence
+
+`ail_investigation.history.similarity` compares two incidents: `0.15 metric_equal + 0.30 jaccard(cohort dimension=value pairs) + 0.35 jaccard(failure-signature tokens with at least 20% of the excess) + 0.20 same (trigger kind, component)`. Signature tokens split on non-alphanumerics (`OOM_KILL|MemoryCache.Allocate` gives `oom, kill, memorycache, allocate`), so related signatures overlap partially. Matches at 0.5 or above are listed; 0.8 or above are labelled a possible recurrence and cited as evidence (`H1`) that the agent can use. An incident never matches an earlier analysis of the same data (compared by data fingerprint). Weights are judgement calls, not fitted.
+
+## Natural-language queries
+
+`ail_detection.nlq` parses a question into a metric (failure rate by default; latency and memory by keyword), a window (`last N minutes/hours/days/weeks`, relative to the newest data and clipped to what exists), an include cohort and optional excluded cohorts after `but not`, `excluding`, `except` or `without`. It then evaluates each cohort with the cohort statistics (significant if LLR > 12 and the ratio clears the cohort threshold) and answers "regression", "also affects the excluded cohort" or "no regression", listing matching incidents. The parsed query is always returned so a misunderstanding is visible.
+
 ## Evaluation
 
 `ail evaluate` runs every scenario with several seeds and reports precision, recall, F1, detection latency, false-positive rate, cohort accuracy, correlation top-1/top-3 and agent grounding. Results are in [../benchmarks/RESULTS.md](../benchmarks/RESULTS.md).
