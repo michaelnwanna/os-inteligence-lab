@@ -35,7 +35,7 @@ Names, hostnames, serial numbers, file paths or contents, process lists, network
 
 Status: the real collectors run on Linux, macOS and Windows in CI. On commit `c73d427` the `agent` job passed on GitHub-hosted Ubuntu, macOS and Windows runners: the live-collector tests passed on each, `ail agent preview` printed a valid payload, and an end-to-end test sent each OS's real heartbeat, CPU and memory events through the ingestion pipeline into the same schema. Two caveats: the ingestion in that test is in-process (the agent and server run in one process, not across a network), and the runners are virtual machines, not personal hardware. macOS was also run by hand on a real laptop; Linux and Windows have not been run on physical machines.
 
-The C#/.NET edition has the same agent (`dotnet/src/Ail.Agent`, same commands and `consent.json`). It was run by hand on macOS against a local server; its `dotnet-agent` CI job covers Linux and Windows, but no results from it are recorded here yet.
+The C#/.NET edition has the same agent (`dotnet/src/Ail.Agent`, same commands and `consent.json`). It was run by hand on macOS against a local server. On commit `1a28b32` its `dotnet-agent` CI job passed on GitHub-hosted Ubuntu, macOS and Windows runners (live collectors, including the Windows P/Invoke calls, and a payload preview); as above, those are virtual machines and the end-to-end test is in-process.
 
 ## Sending to a protected backend
 Set `AIL_API_TOKEN` in the agent's environment; it is sent as a bearer token and never written to disk by the agent.

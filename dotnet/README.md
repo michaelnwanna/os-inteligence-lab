@@ -43,8 +43,9 @@ token authentication and rate limiting on the write endpoints, the benchmark har
 `ail stream`. The agent reads and writes the same `consent.json` as the Python one.
 
 Caveats: the GitHub client is covered by mocked-transport tests only; it has not been run against the live GitHub API.
-The .NET agent was run by hand on macOS only. Its Linux and Windows collectors (including the Windows P/Invoke calls) are
-exercised by the `dotnet-agent` CI job, whose first results are not in yet.
+The .NET agent was run by hand on macOS only. On commit `1a28b32` the `dotnet-agent` CI job passed on GitHub-hosted Ubuntu,
+macOS and Windows runners (live-collector tests, including the Windows P/Invoke calls, plus a payload preview). Those are
+virtual machines, not physical hardware, and the test sends to an in-process server.
 
 ## Differences from the Python edition
 
