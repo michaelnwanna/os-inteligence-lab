@@ -62,8 +62,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - name: Build
+        run: dotnet build dotnet/OsIntelligenceLab.sln -c Release
       - name: Agent tests against the real OS
-        run: dotnet test dotnet/OsIntelligenceLab.sln -c Release --filter "FullyQualifiedName~AgentTests"
+        run: dotnet test dotnet/OsIntelligenceLab.sln -c Release --no-build --filter "FullyQualifiedName~AgentTests"
       - name: Preview the payload this OS would send
         shell: bash
         env:
